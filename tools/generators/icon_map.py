@@ -4,6 +4,7 @@ import inspect
 
 from diagrams import Node
 from diagrams.azure.compute import ContainerApps
+from diagrams.azure.identity import ActiveDirectory
 from diagrams.azure.integration import APIManagement, ServiceBus
 from diagrams.azure.ml import AzureOpenAI
 from diagrams.azure.monitor import Monitor
@@ -16,6 +17,9 @@ from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.vcs import Github
 
 TECHNOLOGY_ICONS = {
+    "Azure API Management": APIManagement,
+    # The installed package retains the former Azure AD name for Entra ID.
+    "Microsoft Entra ID": ActiveDirectory,
     "Azure Service Bus": ServiceBus,
     "PostgreSQL": PostgreSQL,
     "Azure Monitor": Monitor,
