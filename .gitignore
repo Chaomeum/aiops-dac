@@ -1,0 +1,13 @@
+# Entorno y Caché de Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+
+# Artefactos de compilación temporal
+build/
+
+# OS
+.DS_Store
