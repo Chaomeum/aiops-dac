@@ -1,0 +1,1413 @@
+architecture:
+  id: ey_aiops_ci_cd_diagnosis
+  name: Prototipo AIOps para diagnóstico de fallos CI/CD
+  model_version: "0.1.0-phase1"
+  phase: "phase_1_foundations"
+  status: draft
+  renderable: false
+
+  view_constraints:
+    max_nodes_per_view: 15
+
+governance:
+  technology_override:
+    source: tech_drift_resolutions.md
+    rule: >
+      Toda decisión tecnológica del Trabajo de Investigación que contradiga
+      tech_drift_resolutions.md se considera obsoleta para la arquitectura TO-BE.
+
+  scope_authority:
+    source: "P202620027 - Project Charter v.1.3.docx"
+    rule: >
+      Ningún elemento, integración o capacidad fuera del alcance del Project Charter
+      podrá promoverse al modelo canónico.
+
+  academic_rationale:
+    source: TI_Galvez_Jhon_Guzman_Ramiro.docx
+    rule: >
+      El Trabajo de Investigación sustenta las decisiones conceptuales,
+      arquitectónicas y científicas, pero su stack físico histórico no se considera
+      vigente salvo ratificación posterior.
+
+sources:
+  - id: SRC_TI
+    file: TI_Galvez_Jhon_Guzman_Ramiro.docx
+    role: academic_and_architectural_rationale
+
+  - id: SRC_CHARTER
+    file: "P202620027 - Project Charter v.1.3.docx"
+    role: scope_boundary
+
+  - id: SRC_DRIFT
+    file: tech_drift_resolutions.md
+    role: technology_override
+
+layers:
+  - id: L1
+    name: Presentación y Consumo Operativo
+    purpose: >
+      Exponer incidentes, diagnósticos, evidencias, recomendaciones,
+      métricas y revisión humana.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Alcance-del-Proyecto
+
+  - id: L2
+    name: Acceso, Seguridad y Gobierno
+    purpose: >
+      Aplicar control de acceso, mínimo privilegio, auditoría,
+      trazabilidad y controles de privacidad.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Suposiciones-y-Restricciones
+      - SRC_DRIFT#Modelo-de-acceso-a-GitHub
+
+  - id: L3
+    name: Ingesta y Normalización
+    purpose: >
+      Capturar evidencia autorizada, validar, limpiar, normalizar,
+      minimizar y proteger información antes del análisis.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Captura-e-ingesta
+
+  - id: L4
+    name: Procesamiento Orientado a Eventos
+    purpose: >
+      Desacoplar la ingesta del procesamiento mediante mensajería
+      persistente y asíncrona.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_DRIFT#Broker-de-eventos
+      - SRC_DRIFT#Patron-de-mensajeria
+
+  - id: L5
+    name: Procesamiento y Correlación AIOps
+    purpose: >
+      Procesar semánticamente registros, detectar señales anómalas
+      y correlacionar evidencia operacional.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Objetivos-Especificos
+      - SRC_DRIFT#Procesamiento-inicial-de-logs
+      - SRC_DRIFT#Correlacion-de-evidencia
+
+  - id: L6
+    name: Inteligencia Asistida y Diagnóstico
+    purpose: >
+      Recuperar conocimiento contextual y generar hipótesis
+      diagnósticas asistidas mediante un LLM preentrenado.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Resumen-ejecutivo
+      - SRC_DRIFT#Modelo-de-lenguaje
+
+  - id: L7
+    name: Persistencia y Evidencia
+    purpose: >
+      Conservar incidentes, diagnósticos, revisiones, auditoría,
+      conocimiento recuperable y evidencias.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Logica
+      - SRC_CHARTER#Recursos-de-Datos-y-Evidencias
+      - SRC_DRIFT#Persistencia-estructurada
+
+  - id: L8
+    name: Integraciones Externas
+    purpose: >
+      Representar las herramientas CI/CD, DevSecOps y observabilidad
+      que producen o consumen evidencia operacional.
+    status: confirmed
+    source:
+      - SRC_TI#Arquitectura-Integrada
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+
+elements:
+  - id: technical_users
+    name: Usuarios Técnicos
+    kind: actor
+    layer: L1
+    roles:
+      - developers
+      - devops_sre
+      - qa
+      - technical_leads
+      - information_security
+    status: confirmed
+    source:
+      - SRC_CHARTER#Stakeholders-Beneficiarios-o-Usuarios
+      - SRC_DRIFT#Actores-de-validacion
+
+  - id: github
+    name: GitHub
+    kind: external_system
+    layer: L8
+    responsibility: source_control
+    status: confirmed
+    source:
+      - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+
+  - id: github_actions
+    name: GitHub Actions
+    kind: external_system
+    layer: L8
+    responsibility: ci_cd_execution_and_evidence_source
+    status: confirmed
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+
+  - id: optional_devsecops_sources
+    name: Fuentes DevSecOps opcionales
+    kind: external_system
+    layer: L8
+    members:
+      - Checkmarx
+      - Mend
+      - Wiz
+    evidence_types:
+      - quality_gate_results
+      - dependency_findings
+      - security_findings
+      - configuration_findings
+    environment_scope: lower_non_production
+    required: false
+    status: confirmed
+    source:
+      - "tech_drift_resolutions.md#Scanners-DevSecOps"
+      - "tech_drift_resolutions.md#Entorno-de-uso-de-scanners"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A18:I19"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B22:C22"
+
+  - id: observability_sources
+    name: Fuentes de Observabilidad y Runtime Compatibles
+    kind: external_system
+    layer: L8
+    evidence_types:
+      - container_events
+      - deployment_events
+      - runtime_events
+      - metrics_when_available
+      - traces_when_available
+    technology:
+      decision_status: environment_dependent
+      name: null
+    status: confirmed
+    source:
+      - "tech_drift_resolutions.md#Observabilidad"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A20:I21"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B23:C23"
+
+  - id: access_and_governance_controls
+    name: Controles de Acceso y Gobierno
+    kind: component
+    layer: L2
+    capabilities:
+      - corporate_authentication
+      - role_based_authorization
+      - access_control
+      - least_privilege
+      - auditability
+      - traceability
+      - privacy_by_design
+      - recommendation_risk_classification
+      - critical_recommendation_marking
+      - human_approval_enforcement
+    technology:
+      decision_status: open
+      name: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A32:K33"
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A37:K37"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A60:I63"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A70:I71"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C38"
+
+  - id: audit_service
+    name: Audit Service
+    kind: container
+    layer: L2
+    responsibilities:
+      - register_access_events
+      - register_evidence_queries
+      - register_human_review_events
+      - register_governance_decisions
+      - reconstruct_incident_activity
+    audit_event_context:
+      - user
+      - action
+      - resource
+      - timestamp
+      - incident
+      - correlationId
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A6:K6"
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A38:K38"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A8:I9"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
+
+  # ----------------------------------------------------------
+  # ADD — report generation responsibility required by PBI-040.
+  # Publication transport to GitHub Actions remains unresolved.
+  # ----------------------------------------------------------
+  - id: reporting_service
+    name: Diagnostic Reporting Service
+    kind: container
+    layer: L5
+    responsibilities:
+      - generate_incident_report
+      - include_execution_context
+      - include_failure_summary
+      - include_probable_cause
+      - include_supporting_evidence
+      - include_consulted_sources
+      - include_recommendations
+      - include_limitations
+      - preserve_incident_identifier
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
+
+  # ----------------------------------------------------------
+  # ADD — optional corporate notification integration.
+  # Remains outside mandatory core per tech drift.
+  # ----------------------------------------------------------
+  - id: optional_notification_channels
+    name: Canales Corporativos de Notificación
+    kind: external_system
+    layer: L8
+    candidates:
+      - Microsoft Teams
+      - Slack
+      - corporate_email
+    required: false
+    data_constraints:
+      - masked_information_only
+      - respect_channel_permissions
+    status: confirmed
+    source:
+      - "tech_drift_resolutions.md#Canales-corporativos-de-notificacion"
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A34:K34"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A64:I65"
+
+  - id: ingestion_normalization_service
+    name: Servicio de Ingesta y Normalización
+    kind: container
+    layer: L3
+    capabilities:
+      - authorized_capture
+      - canonical_event_mapping
+      - validation
+      - parsing
+      - cleaning
+      - normalization
+      - operational_noise_filtering
+      - masking
+      - anonymization
+      - secret_filtering
+      - data_minimization
+      - correlation_id_assignment
+      - evidence_metadata_capture
+    canonical_event_context:
+      - pipeline
+      - execution
+      - commit
+      - service
+      - environment
+      - correlationId
+    source_specialization:
+      initial_source: github_actions
+      extensible_contracts: true
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A5:K17"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A6:I33"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B21:C26"
+
+  - id: azure_service_bus
+    name: Azure Service Bus
+    kind: container
+    layer: L4
+    responsibility: persistent_asynchronous_messaging
+    technology:
+      decision_status: closed
+      name: Azure Service Bus
+    status: confirmed
+    source:
+      - SRC_DRIFT#Broker-de-eventos
+      - SRC_DRIFT#Patron-de-mensajeria
+
+  - id: nlp_log_processor
+    name: Procesamiento NLP de Logs
+    kind: component
+    layer: L5
+    capabilities:
+      - semantic_representation
+      - log_preprocessing
+      - signal_preparation
+    parser:
+      decision_status: implementation_option
+      selected: null
+      candidates:
+        - Drain
+        - Drain3
+    embedding_model:
+      decision_status: implementation_option
+      selected: null
+    status: confirmed
+    source:
+      - SRC_DRIFT#Procesamiento-inicial-de-logs
+      - SRC_DRIFT#Procesamiento-NLP
+
+  - id: pipeline_service
+    name: Pipeline Service
+    kind: container
+    layer: L5
+    responsibilities:
+      - register_pipeline
+      - register_execution
+      - maintain_pipeline_stages
+      - maintain_execution_state
+      - maintain_execution_metadata
+    traceability_keys:
+      - pipeline
+      - execution
+      - commit
+      - correlationId
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A19:K19"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A34:I35"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
+
+  - id: log_event_service
+    name: Log/Event Service
+    kind: container
+    layer: L5
+    responsibilities:
+      - register_normalized_evidence
+      - query_logs_by_incident
+      - query_events_by_incident
+      - query_evidence_by_correlation_id
+      - preserve_source_metadata
+      - resolve_external_evidence_references
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A20:K20"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A36:I37"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
+
+  - id: anomaly_detection_engine
+    name: Motor AIOps de Detección de Anomalías
+    kind: container
+    layer: L5
+    capabilities:
+      - anomaly_detection
+      - anomaly_scoring
+      - anomaly_prioritization
+      - severity_signal
+      - frequency_signal
+      - affected_stage_signal
+    technology:
+      decision_status: OPEN_DECISION
+      selected: null
+      current_candidate: LogBERT
+    produces_root_cause: false
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "tech_drift_resolutions.md#Motor-AIOps-de-deteccion"
+      - "tech_drift_resolutions.md#Responsabilidad-del-detector"
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A23:K24"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A42:I45"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B31:C31"
+
+  - id: evidence_correlation_engine
+    name: Servicio de Correlación de Evidencias
+    kind: container
+    layer: L5
+    correlation_dimensions:
+      - workflow
+      - run
+      - job
+      - stage
+      - service
+      - commit
+      - timestamp
+      - errors
+      - events
+      - available_metrics
+      - correlationId
+    constraints:
+      - do_not_merge_unrelated_executions
+      - preserve_evidence_provenance
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A25:K25"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A46:I47"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B32:C32"
+
+  - id: recommendation_service
+    name: Recommendation Service
+    kind: container
+    layer: L6
+    responsibilities:
+      - generate_initial_recommendations
+      - associate_recommendation_with_probable_cause
+      - associate_recommendation_with_evidence
+      - expose_evidence_limitations
+    autonomous_execution: false
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A31:K31"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I59"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
+
+  - id: rag_retrieval
+    name: Recuperación de Conocimiento RAG
+    kind: component
+    layer: L6
+    knowledge_scope:
+      - reviewed_incidents
+      - authorized_technical_documentation
+      - authorized_response_procedures
+    provenance_required: true
+    status: confirmed
+    source:
+      - SRC_CHARTER#Marco-Teorico-RAG
+      - SRC_DRIFT#Base-de-conocimiento-RAG
+
+  - id: pretrained_llm_diagnostic_service
+    name: Servicio LLM de Diagnóstico
+    kind: component
+    layer: L6
+    strategy: pretrained_model_integrated
+    deployment_mode:
+      decision_status: open
+      allowed:
+        - service_api
+        - container
+    provider: null
+    model: null
+    input_contract:
+      - sanitized_prioritized_evidence
+      - correlated_context
+      - rag_retrieved_knowledge
+    output_contract:
+      - probable_cause_hypothesis
+      - supporting_evidence
+      - consulted_sources
+      - recommendation
+      - limitations
+      - confidence_when_applicable
+    status: confirmed
+    source:
+      - SRC_CHARTER#Modelos-de-lenguaje-preentrenados
+      - SRC_DRIFT#Modelo-de-lenguaje
+      - SRC_DRIFT#Entrada-del-LLM
+      - SRC_DRIFT#Resultado-automatico
+
+  - id: postgresql_operational_store
+    name: PostgreSQL
+    kind: datastore
+    layer: L7
+    responsibilities:
+      - pipelines
+      - incidents
+      - diagnoses
+      - human_reviews
+      - recommendations
+      - metrics
+      - audit_metadata
+      - evidence_references
+      - traceability_metadata
+    persistence_strategy:
+      domain_separation: true
+      physical_database_split: false
+    technology:
+      decision_status: closed
+      name: PostgreSQL
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A21:K21"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A38:I39"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B29:C29"
+
+  - id: pgvector_knowledge_store
+    name: pgvector Knowledge Store
+    kind: datastore
+    layer: L7
+    responsibility: semantic_retrieval
+    parent_technology: PostgreSQL
+    technology:
+      decision_status: closed
+      name: pgvector
+    status: confirmed
+    source:
+      - SRC_DRIFT#Recuperacion-vectorial
+
+  - id: object_evidence_store
+    name: Almacenamiento de Evidencias y Artefactos
+    kind: datastore
+    layer: L7
+    responsibilities:
+      - large_logs
+      - technical_evidence
+      - pipeline_artifacts
+      - diagnostic_reports
+      - historical_logs_when_authorized
+    reference_requirements:
+      - incident_identifier
+      - execution_identifier
+      - correlationId
+    technology:
+      decision_status: open
+      name: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A22:K22"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A40:I41"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B30:C30"
+
+  - id: web_dashboard
+    name: Dashboard Web AIOps
+    kind: container
+    layer: L1
+    capabilities:
+      - incident_query
+      - diagnosis_query
+      - evidence_query
+      - recommendation_query
+      - pipeline_status_query
+      - tmd_metrics
+      - comparative_diagnosis_metrics
+      - human_review_registration
+      - human_review_status_display
+      - distinguish_generated_hypothesis_from_validated_diagnosis
+      - role_protected_access
+    technology:
+      decision_status: open
+      name: null
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A35:K37"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A66:I71"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
+
+relationships:
+  - id: rel_github_actions_ingestion_event
+    from: github_actions
+    to: ingestion_normalization_service
+    label: Emite eventos autorizados del workflow
+    protocol: HTTPS/Webhook
+    style: event
+    access: read_only
+    status: confirmed
+    source:
+      - SRC_DRIFT#Integracion-con-la-plataforma-CI-CD
+
+  # ----------------------------------------------------------
+  # ADD — broker consumers introduced by domain services
+  # ----------------------------------------------------------
+  - id: rel_service_bus_pipeline_service
+    from: azure_service_bus
+    to: pipeline_service
+    label: Entrega eventos de ejecución para registrar contexto del pipeline
+    protocol: Azure Service Bus
+    style: async
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A32:I35"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B27:C28"
+
+  - id: rel_service_bus_log_event_service
+    from: azure_service_bus
+    to: log_event_service
+    label: Entrega evidencia normalizada para registro y consulta
+    protocol: Azure Service Bus
+    style: async
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A32:I37"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B27:C28"
+
+
+  # ----------------------------------------------------------
+  # ADD — domain persistence
+  # ----------------------------------------------------------
+  - id: rel_pipeline_service_postgresql
+    from: pipeline_service
+    to: postgresql_operational_store
+    label: Persiste pipelines, etapas, estados y metadatos de ejecución
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A34:I39"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C29"
+
+  - id: rel_log_event_service_postgresql
+    from: log_event_service
+    to: postgresql_operational_store
+    label: Persiste y consulta metadatos y referencias de evidencia normalizada
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A36:I41"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C30"
+
+  - id: rel_log_event_service_object_store
+    from: log_event_service
+    to: object_evidence_store
+    label: Almacena y resuelve referencias de logs extensos y evidencias
+    protocol: Object Storage API
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A36:I41"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B30:C30"
+
+
+  # ----------------------------------------------------------
+  # ADD — recommendation flow
+  # Existence of flow is confirmed; internal protocol remains open.
+  # ----------------------------------------------------------
+  - id: rel_llm_recommendation_service
+    from: pretrained_llm_diagnostic_service
+    to: recommendation_service
+    label: Proporciona causa probable y evidencia para generar recomendaciones
+    protocol: TBD
+    style: sync
+    status: open_question
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A50:I59"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B35:C37"
+
+  - id: rel_recommendation_service_postgresql
+    from: recommendation_service
+    to: postgresql_operational_store
+    label: Persiste recomendaciones y su vínculo con diagnóstico y evidencia
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A21:K21"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I63"
+
+  - id: rel_recommendation_governance
+    from: recommendation_service
+    to: access_and_governance_controls
+    label: Somete recomendaciones a clasificación de riesgo y control humano
+    protocol: TBD
+    style: governance
+    status: open_question
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I63"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
+
+  - id: rel_governance_postgresql
+    from: access_and_governance_controls
+    to: postgresql_operational_store
+    label: Registra estado de revisión y decisiones humanas
+    protocol: PostgreSQL
+    style: governance
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A56:I63"
+
+
+  # ----------------------------------------------------------
+  # ADD — audit flow
+  # ----------------------------------------------------------
+  - id: rel_access_controls_audit_service
+    from: access_and_governance_controls
+    to: audit_service
+    label: Registra eventos de autenticación, autorización y gobierno
+    protocol: TBD
+    style: governance
+    status: open_question
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A70:I73"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
+
+  - id: rel_dashboard_audit_service
+    from: web_dashboard
+    to: audit_service
+    label: Registra consultas de incidentes y evidencias realizadas por usuarios
+    protocol: TBD
+    style: governance
+    status: open_question
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
+
+  - id: rel_audit_service_postgresql
+    from: audit_service
+    to: postgresql_operational_store
+    label: Persiste registros de auditoría y trazabilidad de uso
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A38:K38"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
+
+
+  # ----------------------------------------------------------
+  # ADD — report generation/publication
+  # ----------------------------------------------------------
+  - id: rel_reporting_service_postgresql
+    from: reporting_service
+    to: postgresql_operational_store
+    label: Recupera contexto estructurado del incidente y diagnóstico
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
+
+  - id: rel_reporting_service_object_store
+    from: reporting_service
+    to: object_evidence_store
+    label: Persiste reporte diagnóstico y referencias de evidencia asociada
+    protocol: Object Storage API
+    style: sync
+    status: confirmed
+    source:
+      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A22:K22"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
+
+  - id: rel_reporting_service_github_actions
+    from: reporting_service
+    to: github_actions
+    label: Entrega el reporte para publicación como artifact del workflow
+    protocol: TBD
+    style: sync
+    status: open_question
+    source:
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
+
+
+  # ----------------------------------------------------------
+  # ADD — optional notification integration
+  # ----------------------------------------------------------
+  - id: rel_recommendation_optional_notifications
+    from: recommendation_service
+    to: optional_notification_channels
+    label: Envía síntesis protegida del diagnóstico y recomendación
+    protocol: TBD
+    style: async
+    status: open_question
+    source:
+      - "tech_drift_resolutions.md#Canales-corporativos-de-notificacion"
+      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A64:I65"
+
+  - id: rel_ingestion_github_actions_read
+    from: ingestion_normalization_service
+    to: github_actions
+    label: Recupera logs, artefactos y metadatos autorizados
+    protocol: GitHub API/HTTPS
+    style: sync
+    access: read_only
+    status: confirmed
+    source:
+      - SRC_DRIFT#Integracion-con-la-plataforma-CI-CD
+      - SRC_DRIFT#Modelo-de-acceso-a-GitHub
+
+  - id: rel_ingestion_service_bus
+    from: ingestion_normalization_service
+    to: azure_service_bus
+    label: Publica evidencia normalizada y protegida
+    protocol: Azure Service Bus
+    style: async
+    status: confirmed
+    source:
+      - SRC_DRIFT#Patron-de-mensajeria
+      - SRC_DRIFT#Evidencia-antes-de-inferencia
+
+  - id: rel_service_bus_nlp
+    from: azure_service_bus
+    to: nlp_log_processor
+    label: Entrega eventos normalizados para procesamiento
+    protocol: Azure Service Bus
+    style: async
+    status: confirmed
+    source:
+      - SRC_DRIFT#Contrato-canonico-del-core
+
+  - id: rel_nlp_anomaly_engine
+    from: nlp_log_processor
+    to: anomaly_detection_engine
+    label: Proporciona representación procesada para detección
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Contrato-canonico-del-core
+      - SRC_DRIFT#Procesamiento-NLP
+      - SRC_DRIFT#Motor-AIOps-de-deteccion
+
+  - id: rel_anomaly_correlation
+    from: anomaly_detection_engine
+    to: evidence_correlation_engine
+    label: Proporciona señales anómalas priorizadas
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Contrato-canonico-del-core
+      - SRC_DRIFT#Responsabilidad-del-detector
+      - SRC_DRIFT#Correlacion-de-evidencia
+
+  - id: rel_correlation_postgresql
+    from: evidence_correlation_engine
+    to: postgresql_operational_store
+    label: Registra contexto correlacionado y trazabilidad
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Contrato-canonico-del-core
+      - SRC_DRIFT#Persistencia-estructurada
+
+  - id: rel_rag_pgvector
+    from: rag_retrieval
+    to: pgvector_knowledge_store
+    label: Recupera conocimiento operacional semánticamente relacionado
+    protocol: PostgreSQL/pgvector
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Recuperacion-vectorial
+      - SRC_DRIFT#Base-de-conocimiento-RAG
+
+  - id: rel_correlation_rag
+    from: evidence_correlation_engine
+    to: rag_retrieval
+    label: Proporciona contexto del incidente para recuperación
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Evidencia-antes-de-inferencia
+      - SRC_DRIFT#Correlacion-de-evidencia
+      - SRC_DRIFT#Base-de-conocimiento-RAG
+
+  - id: rel_rag_llm
+    from: rag_retrieval
+    to: pretrained_llm_diagnostic_service
+    label: Proporciona contexto recuperado y fuentes
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+      - SRC_DRIFT#Entrada-del-LLM
+      - SRC_DRIFT#Evidencia-antes-de-inferencia
+      - SRC_DRIFT#Modelo-de-lenguaje
+
+  - id: rel_github_github_actions
+    from: github
+    to: github_actions
+    label: Proporciona repositorio, commits y definición de workflows CI/CD
+    protocol: GitHub API/HTTPS
+    style: event
+    status: confirmed
+    source:
+      - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+      - SRC_DRIFT#Integracion-con-la-plataforma-CI-CD
+
+  - id: rel_devsecops_sources_ingestion
+    from: optional_devsecops_sources
+    to: ingestion_normalization_service
+    label: Proporciona hallazgos autorizados como evidencia complementaria
+    protocol: REST/HTTPS
+    style: sync
+    access: read_only
+    status: confirmed
+    source:
+      - SRC_DRIFT#Scanners-DevSecOps
+      - SRC_DRIFT#Entorno-de-uso-de-scanners
+      - SRC_DRIFT#Captura-e-ingesta
+
+  - id: rel_observability_sources_ingestion
+    from: observability_sources
+    to: ingestion_normalization_service
+    label: Proporciona telemetría y evidencia operacional autorizada
+    protocol: REST/HTTPS
+    style: sync
+    access: read_only
+    status: confirmed
+    source:
+      - SRC_DRIFT#Observabilidad
+      - SRC_DRIFT#Captura-e-ingesta
+      - SRC_DRIFT#Proteccion-de-informacion-sensible
+
+  - id: rel_technical_users_dashboard
+    from: technical_users
+    to: web_dashboard
+    label: Consulta resultados y registra revisión humana
+    protocol: HTTPS
+    style: sync
+    status: confirmed
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Human-in-the-Loop
+
+outputs:
+  - id: diagnostic_hypothesis
+    name: Hipótesis diagnóstica
+    required: true
+    fields:
+      - probable_cause
+      - evidence
+      - consulted_sources
+      - recommendation
+      - limitations
+      - confidence_when_applicable
+    source:
+      - SRC_DRIFT#Resultado-automatico
+
+  - id: github_actions_diagnostic_artifact
+    name: Reporte de diagnóstico como artifact de GitHub Actions
+    required: true
+    publication_target: github_actions
+    format: null
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Reporte-de-diagnostico
+
+  - id: dashboard_output
+    name: Dashboard Web
+    required: true
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Dashboard
+
+cross_cutting_controls:
+  - id: CTRL-001
+    name: Read-only y mínimo privilegio
+    applies_to:
+      - github
+      - github_actions
+
+  - id: CTRL-002
+    name: Privacy by Design
+    rules:
+      - masking_before_ai
+      - anonymization_before_ai
+      - minimization_before_ai
+      - secret_filtering_before_ai
+
+  - id: CTRL-003
+    name: Trazabilidad end-to-end
+    identifier: correlationId
+
+  - id: CTRL-004
+    name: Auditoría técnica
+    required: true
+
+  - id: CTRL-005
+    name: Human-in-the-Loop
+    required: true
+
+  - id: CTRL-006
+    name: Separación evaluación-RAG
+    rule: >
+      Los casos de evaluación y sus soluciones de referencia no pueden
+      formar parte del conocimiento recuperable mediante RAG.
+
+architectural_invariants:
+  - id: INV-001
+    rule: >
+      Ninguna evidencia potencialmente sensible puede alcanzar NLP,
+      detector AIOps, RAG o LLM sin pasar previamente por ingesta,
+      normalización y protección de datos.
+
+  - id: INV-002
+    rule: >
+      El LLM no recibe logs crudos directamente.
+
+  - id: INV-003
+    rule: >
+      El acceso del prototipo a GitHub/GitHub Actions es read-only
+      por defecto y debe operar bajo mínimo privilegio.
+
+  - id: INV-004
+    rule: >
+      El Motor AIOps detecta y prioriza anomalías; no produce una
+      causa raíz confirmada.
+
+  - id: INV-005
+    rule: >
+      Toda salida automática se denomina causa probable hasta que
+      sea validada mediante evidencia y revisión técnica.
+
+  - id: INV-006
+    rule: >
+      La revisión humana debe poder validar, corregir o rechazar
+      diagnóstico y recomendación.
+
+  - id: INV-007
+    rule: >
+      La remediación autónoma queda fuera del MVP.
+
+  - id: INV-008
+    rule: >
+      No se entrenan modelos desde cero, no se modifican pesos y
+      el ajuste de hiperparámetros no constituye aporte de la tesis.
+
+  - id: INV-009
+    rule: >
+      La duración de retención no puede codificarse hasta disponer
+      de política institucional o normativa aplicable.
+
+  - id: INV-010
+    rule: >
+      Los casos y soluciones utilizados para evaluación deben
+      mantenerse separados del corpus utilizado por RAG.
+
+validation_contract:
+  primary_time_metric:
+    name: TMD
+    description: Tiempo Medio de Diagnóstico
+    target_reduction_percent: 30
+
+  diagnostic_accuracy:
+    target_minimum_percent: 80
+    metric: probable_cause_identification_accuracy
+
+  traceability:
+    required: true
+
+  diagnostic_evidence:
+    required: true
+
+deployment:
+  cloud:
+    provider: Microsoft Azure
+    status: confirmed
+
+  validation_environment:
+    mode: controlled
+    allowed_evidence:
+      - anonymized
+      - synthetic
+      - explicitly_authorized
+    production_required: false
+    status: confirmed
+    source:
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B42:C45"
+
+  containerization:
+    required: true
+    orchestrator:
+      status: open_question
+      technology: null
+
+  container_hosts:
+    pipeline_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B20:C20"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    log_event_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B20:C20"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    anomaly_detection_engine:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B31:C31"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    evidence_correlation_engine:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B32:C32"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    recommendation_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    audit_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+    reporting_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: null
+      status: confirmed
+      source:
+        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
+        - "tech_drift_resolutions.md#Contenedorizacion"
+
+  event_broker:
+    technology: Azure Service Bus
+    status: confirmed
+
+  structured_persistence:
+    technology: PostgreSQL
+    status: confirmed
+
+  vector_store:
+    technology: pgvector
+    status: confirmed
+
+  object_storage:
+    technology: null
+    status: open_question
+
+  observability_platform:
+    technology: null
+    status: environment_dependent
+
+  llm:
+    strategy: pretrained_model_integrated
+    provider: null
+    model: null
+    status: open_question
+
+open_questions:
+  - id: OQ-001
+    topic: anomaly_detection_engine
+    question: >
+      ¿Qué modelo existente/preentrenado se seleccionará como motor
+      AIOps de detección de anomalías?
+    current_candidate: LogBERT
+    blocks_final_view: true
+
+  - id: OQ-002
+    topic: log_parser
+    question: >
+      ¿Se utilizará Drain, Drain3 u otra implementación para parsing
+      y estructuración de logs?
+    blocks_final_view: false
+
+  - id: OQ-003
+    topic: embedding_model
+    question: >
+      ¿Qué modelo de embeddings/representación semántica se utilizará?
+    blocks_final_view: false
+
+  - id: OQ-004
+    topic: container_orchestrator
+    question: >
+      ¿Qué servicio Azure alojará/orquestará los componentes
+      contenedorizados del MVP?
+    blocks_final_view: true
+
+  - id: OQ-005
+    topic: observability_platform
+    question: >
+      ¿Qué plataforma o plataformas de observabilidad estarán
+      disponibles realmente en el entorno de validación?
+    blocks_final_view: true
+
+  - id: OQ-006
+    topic: identity_and_api_perimeter
+    question: >
+      ¿Qué mecanismos o servicios concretos implementarán identidad,
+      autenticación, autorización y exposición de APIs?
+    blocks_final_view: true
+
+  - id: OQ-007
+    topic: object_storage
+    question: >
+      ¿Qué servicio se utilizará para almacenar logs extensos,
+      artefactos y evidencias pesadas?
+    blocks_final_view: true
+
+  - id: OQ-008
+    topic: llm_provider
+    question: >
+      ¿Qué proveedor/modelo preentrenado y qué modalidad de despliegue
+      serán autorizados para el MVP?
+    blocks_final_view: true
+
+  - id: OQ-009
+    topic: github_authentication
+    question: >
+      ¿Qué mecanismo autorizado implementará el acceso read-only
+      a GitHub y GitHub Actions?
+    blocks_final_view: true
+
+  - id: OQ-010
+    topic: service_bus_topology
+    question: >
+      ¿La topología de Azure Service Bus utilizará queues, topics,
+      subscriptions u otra combinación?
+    blocks_final_view: false
+
+  - id: OQ-012
+    topic: retention
+    question: >
+      ¿Qué política institucional o del entorno de validación definirá
+      la retención de logs, diagnósticos y evidencias?
+    blocks_final_view: false
+
+  - id: OQ-013
+    topic: report_format
+    question: >
+      ¿Cuál será el formato técnico del reporte descargable publicado
+      como artifact de GitHub Actions?
+    blocks_final_view: false
+
+  - id: OQ-014
+    topic: optional_devsecops_integration
+    question: >
+      ¿Cuáles de Checkmarx, Mend y Wiz se integrarán efectivamente
+      durante el MVP y mediante qué interfaces autorizadas?
+    blocks_final_view: false
+
+  - id: OQ-015
+    topic: dashboard_backend_contract
+    question: >
+      ¿Qué componente y contrato expondrá incidentes, diagnósticos,
+      evidencias y revisiones humanas al dashboard?
+    blocks_final_view: true
+
+conflicts:
+  resolved:
+    - id: CF-001
+      topic: source_precedence
+      conflict: >
+        tech_drift_resolutions.md declara internamente Project Charter
+        v1.3 por encima del propio drift, mientras la directiva actual
+        de ingesta establece al drift como override tecnológico absoluto.
+      resolution: >
+        Para esta ingesta prevalece la directiva actual del proyecto:
+        tech_drift_resolutions.md actúa como override tecnológico.
+      action_required: >
+        Actualizar posteriormente la cabecera de tech_drift_resolutions.md
+        para evitar ambigüedad para agentes futuros.
+
+    - id: CF-002
+      topic: ci_cd_platform
+      obsolete: Azure DevOps / Jenkins / múltiples alternativas principales
+      canonical: GitHub + GitHub Actions
+      resolved_by: SRC_DRIFT
+
+    - id: CF-003
+      topic: ingestion_scope
+      obsolete: Adaptadores equivalentes para múltiples plataformas
+      canonical: GitHub Actions como integración inicial especializada
+      resolved_by: SRC_DRIFT
+
+    - id: CF-004
+      topic: privacy_gateway
+      obsolete: Privacy Gateway como microservicio independiente
+      canonical: Responsabilidades integradas en ingesta/normalización
+      resolved_by: SRC_DRIFT
+
+    - id: CF-005
+      topic: event_broker
+      obsolete: Kafka / RabbitMQ / Azure Service Bus como alternativas
+      canonical: Azure Service Bus
+      resolved_by: SRC_DRIFT
+
+    - id: CF-006
+      topic: anomaly_detector
+      obsolete: LogBERT presentado como selección definitiva
+      canonical: Motor AIOps lógico con selección tecnológica abierta
+      resolved_by: SRC_DRIFT
+
+    - id: CF-007
+      topic: diagnosis_semantics
+      obsolete: Causa raíz generada automáticamente
+      canonical: Causa probable hasta validación técnica
+      resolved_by: SRC_DRIFT
+
+    - id: CF-008
+      topic: autonomous_remediation
+      obsolete: Self-healing semiautónomo como parte potencial del MVP
+      canonical: Remediación autónoma fuera del MVP
+      resolved_by: SRC_DRIFT
+
+    - id: CF-009
+      topic: primary_time_kpi
+      obsolete: MTTR como indicador contractual principal
+      canonical: TMD con reducción mínima del 30 por ciento
+      resolved_by: SRC_DRIFT
+
+    - id: CF-010
+      topic: observability_products
+      obsolete: Loki / Prometheus u otros productos como componentes obligatorios
+      canonical: Fuente de observabilidad compatible, producto no fijado
+      resolved_by: SRC_DRIFT
+
+  unresolved: []
+
+views: []
