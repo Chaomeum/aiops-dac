@@ -12,6 +12,7 @@ with FILE.open(encoding="utf-8") as f:
 elements = doc.get("elements", [])
 relationships = doc.get("relationships", [])
 views = doc.get("views", [])
+outputs = doc.get("outputs", [])
 
 element_ids = [e.get("id") for e in elements]
 relation_ids = [r.get("id") for r in relationships]
@@ -26,6 +27,8 @@ for ident in all_ids:
 
 known = set(x for x in element_ids if x)
 used = set()
+elements_by_id = {e.get("id"): e for e in elements if e.get("id")}
+adjacency = {ident: set() for ident in known}
 
 for r in relationships:
     rid = r.get("id", "<unknown>")
@@ -38,10 +41,16 @@ for r in relationships:
         used.add(src)
     if dst in known:
         used.add(dst)
+    if src in known and dst in known:
+        adjacency[src].add(dst)
     if not r.get("label"):
         errors.append(f"{rid}: missing relationship label")
     if not r.get("protocol"):
         errors.append(f"{rid}: missing relationship protocol")
+    if r.get("status") == "confirmed" and r.get("protocol") == "TBD":
+        errors.append(f"{rid}: confirmed relationship has protocol TBD")
+    if doc.get("open_questions") == [] and r.get("status") == "open_question":
+        errors.append(f"{rid}: relationship is open_question but open_questions is empty")
 
 for orphan in sorted(known - used):
     errors.append(f"Orphan element: {orphan}")
@@ -63,6 +72,52 @@ for e in elements:
     if e.get("kind") == "container" and str(e.get("layer")).upper() in {"5", "L5"}:
         if not e.get("host"):
             errors.append(f"{e.get('id')}: Layer 5 container has no host")
+    if e.get("kind") == "component":
+        eid = e.get("id", "<unknown>")
+        parent = e.get("parent")
+        if not parent:
+            errors.append(f"{eid}: expected parent container ID; found parent={parent!r}")
+        elif parent not in elements_by_id:
+            errors.append(f"{eid}: expected existing parent container; found parent={parent!r}")
+        elif elements_by_id[parent].get("kind") != "container":
+            parent_kind = elements_by_id[parent].get("kind")
+            errors.append(
+                f"{eid}: expected parent kind container; "
+                f"found parent={parent!r}, kind={parent_kind!r}"
+            )
+
+
+def has_directed_path(start, target):
+    """Search publisher-to-producer paths without assuming any element IDs."""
+    pending = [start]
+    visited = set()
+    while pending:
+        current = pending.pop()
+        if current == target:
+            return True
+        if current in visited:
+            continue
+        visited.add(current)
+        pending.extend(adjacency.get(current, set()) - visited)
+    return False
+
+
+for output in outputs:
+    oid = output.get("id", "<unknown>")
+    producer = output.get("produced_by")
+    publisher = output.get("published_by")
+    if output.get("required") is True and not producer:
+        errors.append(f"{oid}: required output missing produced_by")
+    if "produced_by" in output and producer not in known:
+        errors.append(f"{oid}: unknown produced_by: {producer!r}")
+    if "published_by" in output and publisher not in known:
+        errors.append(f"{oid}: unknown published_by: {publisher!r}")
+    if (producer in known and publisher in known and producer != publisher
+            and not has_directed_path(publisher, producer)):
+        errors.append(
+            f"{oid}: no directed path from published_by {publisher!r} "
+            f"to produced_by {producer!r}"
+        )
 
 if errors:
     print("ARCHITECTURE VALIDATION FAILED")
