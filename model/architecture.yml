@@ -42,6 +42,70 @@ sources:
     file: tech_drift_resolutions.md
     role: technology_override
 
+  - id: SRC_ADR_001
+    file: docs/architecture/decisions/ADR-001-azure-container-apps.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_002
+    file: docs/architecture/decisions/ADR-002-azure-observability.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_003
+    file: docs/architecture/decisions/ADR-003-identity-api-perimeter.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_004
+    file: docs/architecture/decisions/ADR-004-azure-openai.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_005
+    file: docs/architecture/decisions/ADR-005-github-app-authentication.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_006
+    file: docs/architecture/decisions/ADR-006-dashboard-api-contract.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_007
+    file: docs/architecture/decisions/ADR-007-log-processing-and-embeddings.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_008
+    file: docs/architecture/decisions/ADR-008-react-azure-static-web-apps.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_009
+    file: docs/architecture/decisions/ADR-009-remove-reporting-service.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_010
+    file: docs/architecture/decisions/ADR-010-remove-anomaly-detector-from-mvp.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_011
+    file: docs/architecture/decisions/ADR-011-audit-trail-without-audit-service.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_012
+    file: docs/architecture/decisions/ADR-012-remove-notification-channels-from-mvp.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_013
+    file: docs/architecture/decisions/ADR-013-retention-365-days.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_014
+    file: docs/architecture/decisions/ADR-014-devsecops-scanners-outside-mvp.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_015
+    file: docs/architecture/decisions/ADR-015-diagnostic-runtime-boundaries-and-orchestration.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_016
+    file: docs/architecture/decisions/ADR-016-identity-api-human-review-and-artifact-flow.md
+    role: approved_architectural_decision
+
 layers:
   - id: L1
     name: Presentación y Consumo Operativo
@@ -89,8 +153,8 @@ layers:
   - id: L5
     name: Procesamiento y Correlación AIOps
     purpose: >
-      Procesar semánticamente registros, detectar señales anómalas
-      y correlacionar evidencia operacional.
+      Procesar semánticamente registros y correlacionar evidencia
+      operacional de fallos identificados por GitHub Actions.
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -152,41 +216,40 @@ elements:
     kind: external_system
     layer: L8
     responsibility: source_control
+    authentication:
+      mechanism: GitHub App
+      access: read_only
+      credential_type: installation_token
     status: confirmed
     source:
       - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+      - SRC_ADR_005
 
   - id: github_actions
     name: GitHub Actions
     kind: external_system
     layer: L8
     responsibility: ci_cd_execution_and_evidence_source
+    indirect_scanner_evidence:
+      via:
+        - workflow_logs
+        - workflow_events
+        - workflow_artifacts
+      evidence_types:
+        - quality_gate_results
+        - dependency_findings
+        - security_findings
+        - configuration_findings
+    diagnostic_artifact:
+      source: diagnostic_output
+      publication: native_workflow_step
+      format: implementation_detail
     status: confirmed
     source:
       - SRC_CHARTER#Alcance-del-Proyecto
       - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
-
-  - id: optional_devsecops_sources
-    name: Fuentes DevSecOps opcionales
-    kind: external_system
-    layer: L8
-    members:
-      - Checkmarx
-      - Mend
-      - Wiz
-    evidence_types:
-      - quality_gate_results
-      - dependency_findings
-      - security_findings
-      - configuration_findings
-    environment_scope: lower_non_production
-    required: false
-    status: confirmed
-    source:
-      - "tech_drift_resolutions.md#Scanners-DevSecOps"
-      - "tech_drift_resolutions.md#Entorno-de-uso-de-scanners"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A18:I19"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B22:C22"
+      - SRC_ADR_009
+      - SRC_ADR_014
 
   - id: observability_sources
     name: Fuentes de Observabilidad y Runtime Compatibles
@@ -199,117 +262,51 @@ elements:
       - metrics_when_available
       - traces_when_available
     technology:
-      decision_status: environment_dependent
-      name: null
+      decision_status: closed
+      name: Azure Monitor
+      application_telemetry: Application Insights
     status: confirmed
     source:
       - "tech_drift_resolutions.md#Observabilidad"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A20:I21"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B23:C23"
+      - SRC_ADR_002
 
-  - id: access_and_governance_controls
-    name: Controles de Acceso y Gobierno
-    kind: component
-    layer: L2
-    capabilities:
-      - corporate_authentication
-      - role_based_authorization
-      - access_control
-      - least_privilege
-      - auditability
-      - traceability
-      - privacy_by_design
-      - recommendation_risk_classification
-      - critical_recommendation_marking
-      - human_approval_enforcement
-    technology:
-      decision_status: open
-      name: null
-    status: confirmed
-    source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A32:K33"
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A37:K37"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A60:I63"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A70:I71"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C38"
-
-  - id: audit_service
-    name: Audit Service
-    kind: container
-    layer: L2
-    responsibilities:
-      - register_access_events
-      - register_evidence_queries
-      - register_human_review_events
-      - register_governance_decisions
-      - reconstruct_incident_activity
-    audit_event_context:
-      - user
-      - action
-      - resource
-      - timestamp
-      - incident
-      - correlationId
-    host:
-      environment: microsoft_azure
-      runtime: controlled_container_environment
-      concrete_service: null
-    status: confirmed
-    source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A6:K6"
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A38:K38"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A8:I9"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
-
-  # ----------------------------------------------------------
-  # ADD — report generation responsibility required by PBI-040.
-  # Publication transport to GitHub Actions remains unresolved.
-  # ----------------------------------------------------------
-  - id: reporting_service
-    name: Diagnostic Reporting Service
-    kind: container
-    layer: L5
-    responsibilities:
-      - generate_incident_report
-      - include_execution_context
-      - include_failure_summary
-      - include_probable_cause
-      - include_supporting_evidence
-      - include_consulted_sources
-      - include_recommendations
-      - include_limitations
-      - preserve_incident_identifier
-    host:
-      environment: microsoft_azure
-      runtime: controlled_container_environment
-      concrete_service: null
-    status: confirmed
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
-
-  # ----------------------------------------------------------
-  # ADD — optional corporate notification integration.
-  # Remains outside mandatory core per tech drift.
-  # ----------------------------------------------------------
-  - id: optional_notification_channels
-    name: Canales Corporativos de Notificación
+  - id: entra_id
+    name: Microsoft Entra ID
     kind: external_system
-    layer: L8
-    candidates:
-      - Microsoft Teams
-      - Slack
-      - corporate_email
-    required: false
-    data_constraints:
-      - masked_information_only
-      - respect_channel_permissions
+    layer: L2
+    responsibility: corporate_identity_provider
+    technology:
+      decision_status: closed
+      name: Microsoft Entra ID
+    capabilities:
+    - corporate_authentication
+    - identity_token_issuance
     status: confirmed
     source:
-      - "tech_drift_resolutions.md#Canales-corporativos-de-notificacion"
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A34:K34"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A64:I65"
+    - SRC_ADR_003
+    - SRC_ADR_016
+
+  - id: api_management
+    name: Azure API Management
+    kind: container
+    layer: L2
+    responsibility: api_perimeter_and_routing
+    capabilities:
+    - protected_api_entry_point
+    - request_routing
+    - access_policy_enforcement
+    technology:
+      decision_status: closed
+      name: Azure API Management
+    host:
+      environment: microsoft_azure
+      concrete_service: Azure API Management
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_016
 
   - id: ingestion_normalization_service
     name: Servicio de Ingesta y Normalización
@@ -342,12 +339,13 @@ elements:
     host:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A5:K17"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A6:I33"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B21:C26"
+      - SRC_ADR_001
 
   - id: azure_service_bus
     name: Azure Service Bus
@@ -357,6 +355,14 @@ elements:
     technology:
       decision_status: closed
       name: Azure Service Bus
+    topology:
+      decision_status: closed
+      kind: topic_with_subscriptions
+      topic_count: 1
+      subscriptions:
+        - consumer: pipeline_service
+        - consumer: log_event_service
+        - consumer: nlp_log_processor
     status: confirmed
     source:
       - SRC_DRIFT#Broker-de-eventos
@@ -364,25 +370,31 @@ elements:
 
   - id: nlp_log_processor
     name: Procesamiento NLP de Logs
-    kind: component
+    kind: container
     layer: L5
     capabilities:
-      - semantic_representation
-      - log_preprocessing
-      - signal_preparation
+    - semantic_representation
+    - log_preprocessing
+    - signal_preparation
     parser:
-      decision_status: implementation_option
-      selected: null
-      candidates:
-        - Drain
-        - Drain3
+      decision_status: closed
+      selected: Drain3
     embedding_model:
-      decision_status: implementation_option
-      selected: null
+      decision_status: closed
+      provider: Azure OpenAI Service
+      capability: embeddings
+      selected_model: null
+      purpose: semantic_retrieval_for_rag
     status: confirmed
     source:
-      - SRC_DRIFT#Procesamiento-inicial-de-logs
-      - SRC_DRIFT#Procesamiento-NLP
+    - SRC_DRIFT#Procesamiento-inicial-de-logs
+    - SRC_DRIFT#Procesamiento-NLP
+    - SRC_ADR_007
+    - SRC_ADR_015
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: Azure Container Apps
 
   - id: pipeline_service
     name: Pipeline Service
@@ -402,7 +414,7 @@ elements:
     host:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A19:K19"
@@ -423,40 +435,12 @@ elements:
     host:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A20:K20"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A36:I37"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
-
-  - id: anomaly_detection_engine
-    name: Motor AIOps de Detección de Anomalías
-    kind: container
-    layer: L5
-    capabilities:
-      - anomaly_detection
-      - anomaly_scoring
-      - anomaly_prioritization
-      - severity_signal
-      - frequency_signal
-      - affected_stage_signal
-    technology:
-      decision_status: OPEN_DECISION
-      selected: null
-      current_candidate: LogBERT
-    produces_root_cause: false
-    host:
-      environment: microsoft_azure
-      runtime: controlled_container_environment
-      concrete_service: null
-    status: confirmed
-    source:
-      - "tech_drift_resolutions.md#Motor-AIOps-de-deteccion"
-      - "tech_drift_resolutions.md#Responsabilidad-del-detector"
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A23:K24"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A42:I45"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B31:C31"
 
   - id: evidence_correlation_engine
     name: Servicio de Correlación de Evidencias
@@ -480,76 +464,128 @@ elements:
     host:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A25:K25"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A46:I47"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B32:C32"
+      - SRC_ADR_001
 
   - id: recommendation_service
-    name: Recommendation Service
+    name: Diagnostic & Recommendation Service
     kind: container
     layer: L6
     responsibilities:
-      - generate_initial_recommendations
-      - associate_recommendation_with_probable_cause
-      - associate_recommendation_with_evidence
-      - expose_evidence_limitations
+    - generate_initial_recommendations
+    - associate_recommendation_with_probable_cause
+    - associate_recommendation_with_evidence
+    - expose_evidence_limitations
+    - orchestrate_diagnostic_flow
+    diagnostic_output:
+      type: structured_contract
+      includes:
+      - incident_id
+      - execution_context
+      - failure_summary
+      - probable_cause
+      - supporting_evidence
+      - consulted_sources
+      - recommendations
+      - limitations
+      - confidence
     autonomous_execution: false
     host:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
     status: confirmed
     source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A31:K31"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I59"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
+    - TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A31:K31
+    - TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I59
+    - TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37
+    - SRC_ADR_001
+    - SRC_ADR_009
+    - SRC_ADR_015
+
+  - id: human_review_component
+    name: Human Review & Diagnostic Governance
+    kind: component
+    layer: L6
+    parent: recommendation_service
+    capabilities:
+    - recommendation_risk_classification
+    - critical_recommendation_marking
+    - human_approval_enforcement
+    - review_registration
+    - validate_diagnosis
+    - correct_diagnosis
+    - reject_diagnosis
+    status: confirmed
+    source:
+    - SRC_ADR_011
+    - SRC_ADR_016
 
   - id: rag_retrieval
     name: Recuperación de Conocimiento RAG
-    kind: component
+    kind: container
     layer: L6
     knowledge_scope:
-      - reviewed_incidents
-      - authorized_technical_documentation
-      - authorized_response_procedures
+    - reviewed_incidents
+    - authorized_technical_documentation
+    - authorized_response_procedures
     provenance_required: true
+    semantic_representation:
+      provider: Azure OpenAI Service
+      capability: embeddings
+      vector_store: pgvector_knowledge_store
     status: confirmed
     source:
-      - SRC_CHARTER#Marco-Teorico-RAG
-      - SRC_DRIFT#Base-de-conocimiento-RAG
+    - SRC_CHARTER#Marco-Teorico-RAG
+    - SRC_DRIFT#Base-de-conocimiento-RAG
+    - SRC_ADR_007
+    - SRC_ADR_015
+    host:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: Azure Container Apps
+    responsibilities:
+    - retrieve_authorized_knowledge
+    - semantic_search
+    - preserve_provenance
+    - interact_with_vector_store
 
   - id: pretrained_llm_diagnostic_service
-    name: Servicio LLM de Diagnóstico
-    kind: component
+    name: Azure OpenAI Service
+    kind: external_system
     layer: L6
     strategy: pretrained_model_integrated
     deployment_mode:
-      decision_status: open
-      allowed:
-        - service_api
-        - container
-    provider: null
+      decision_status: closed
+      selected: service_api
+    provider: Azure OpenAI Service
+    model_family: GPT-4
     model: null
     input_contract:
-      - sanitized_prioritized_evidence
-      - correlated_context
-      - rag_retrieved_knowledge
+    - sanitized_prioritized_evidence
+    - correlated_context
+    - rag_retrieved_knowledge
     output_contract:
-      - probable_cause_hypothesis
-      - supporting_evidence
-      - consulted_sources
-      - recommendation
-      - limitations
-      - confidence_when_applicable
+    - probable_cause_hypothesis
+    - supporting_evidence
+    - consulted_sources
+    - recommendation
+    - limitations
+    - confidence_when_applicable
     status: confirmed
     source:
-      - SRC_CHARTER#Modelos-de-lenguaje-preentrenados
-      - SRC_DRIFT#Modelo-de-lenguaje
-      - SRC_DRIFT#Entrada-del-LLM
-      - SRC_DRIFT#Resultado-automatico
+    - SRC_CHARTER#Modelos-de-lenguaje-preentrenados
+    - SRC_DRIFT#Modelo-de-lenguaje
+    - SRC_DRIFT#Entrada-del-LLM
+    - SRC_DRIFT#Resultado-automatico
+    - SRC_ADR_004
+    - SRC_ADR_015
+    managed_service: true
 
   - id: postgresql_operational_store
     name: PostgreSQL
@@ -605,8 +641,8 @@ elements:
       - execution_identifier
       - correlationId
     technology:
-      decision_status: open
-      name: null
+      decision_status: closed
+      name: Azure Blob Storage
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A22:K22"
@@ -629,14 +665,27 @@ elements:
       - human_review_status_display
       - distinguish_generated_hypothesis_from_validated_diagnosis
       - role_protected_access
+    backend_contract:
+      entry_point: Azure API Management
+      protocol: REST/HTTPS
+      services:
+        - pipeline_service
+        - log_event_service
+        - recommendation_service
     technology:
-      decision_status: open
-      name: null
+      decision_status: closed
+      framework: React
+      architecture_style: SPA
+    host:
+      cloud: Azure
+      concrete_service: Azure Static Web Apps
     status: confirmed
     source:
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A35:K37"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A66:I71"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
+      - SRC_ADR_006
+      - SRC_ADR_008
 
 relationships:
   - id: rel_github_actions_ingestion_event
@@ -715,138 +764,18 @@ relationships:
 
   # ----------------------------------------------------------
   # ADD — recommendation flow
-  # Existence of flow is confirmed; internal protocol remains open.
+  # Persist diagnostic output and recommendations over PostgreSQL.
   # ----------------------------------------------------------
-  - id: rel_llm_recommendation_service
-    from: pretrained_llm_diagnostic_service
-    to: recommendation_service
-    label: Proporciona causa probable y evidencia para generar recomendaciones
-    protocol: TBD
-    style: sync
-    status: open_question
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A50:I59"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B35:C37"
-
   - id: rel_recommendation_service_postgresql
     from: recommendation_service
     to: postgresql_operational_store
-    label: Persiste recomendaciones y su vínculo con diagnóstico y evidencia
+    label: Persiste diagnóstico, recomendaciones y vínculos con evidencia
     protocol: PostgreSQL
     style: sync
     status: confirmed
     source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A21:K21"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I63"
-
-  - id: rel_recommendation_governance
-    from: recommendation_service
-    to: access_and_governance_controls
-    label: Somete recomendaciones a clasificación de riesgo y control humano
-    protocol: TBD
-    style: governance
-    status: open_question
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I63"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
-
-  - id: rel_governance_postgresql
-    from: access_and_governance_controls
-    to: postgresql_operational_store
-    label: Registra estado de revisión y decisiones humanas
-    protocol: PostgreSQL
-    style: governance
-    status: confirmed
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A56:I63"
-
-
-  # ----------------------------------------------------------
-  # ADD — audit flow
-  # ----------------------------------------------------------
-  - id: rel_access_controls_audit_service
-    from: access_and_governance_controls
-    to: audit_service
-    label: Registra eventos de autenticación, autorización y gobierno
-    protocol: TBD
-    style: governance
-    status: open_question
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A70:I73"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
-
-  - id: rel_dashboard_audit_service
-    from: web_dashboard
-    to: audit_service
-    label: Registra consultas de incidentes y evidencias realizadas por usuarios
-    protocol: TBD
-    style: governance
-    status: open_question
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
-
-  - id: rel_audit_service_postgresql
-    from: audit_service
-    to: postgresql_operational_store
-    label: Persiste registros de auditoría y trazabilidad de uso
-    protocol: PostgreSQL
-    style: sync
-    status: confirmed
-    source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A38:K38"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A72:I73"
-
-
-  # ----------------------------------------------------------
-  # ADD — report generation/publication
-  # ----------------------------------------------------------
-  - id: rel_reporting_service_postgresql
-    from: reporting_service
-    to: postgresql_operational_store
-    label: Recupera contexto estructurado del incidente y diagnóstico
-    protocol: PostgreSQL
-    style: sync
-    status: confirmed
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
-
-  - id: rel_reporting_service_object_store
-    from: reporting_service
-    to: object_evidence_store
-    label: Persiste reporte diagnóstico y referencias de evidencia asociada
-    protocol: Object Storage API
-    style: sync
-    status: confirmed
-    source:
-      - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A22:K22"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
-
-  - id: rel_reporting_service_github_actions
-    from: reporting_service
-    to: github_actions
-    label: Entrega el reporte para publicación como artifact del workflow
-    protocol: TBD
-    style: sync
-    status: open_question
-    source:
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A74:I75"
-      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
-
-
-  # ----------------------------------------------------------
-  # ADD — optional notification integration
-  # ----------------------------------------------------------
-  - id: rel_recommendation_optional_notifications
-    from: recommendation_service
-    to: optional_notification_channels
-    label: Envía síntesis protegida del diagnóstico y recomendación
-    protocol: TBD
-    style: async
-    status: open_question
-    source:
-      - "tech_drift_resolutions.md#Canales-corporativos-de-notificacion"
-      - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A64:I65"
+    - TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A21:K21
+    - TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I63
 
   - id: rel_ingestion_github_actions_read
     from: ingestion_normalization_service
@@ -881,29 +810,15 @@ relationships:
     source:
       - SRC_DRIFT#Contrato-canonico-del-core
 
-  - id: rel_nlp_anomaly_engine
+  - id: rel_nlp_correlation
     from: nlp_log_processor
-    to: anomaly_detection_engine
-    label: Proporciona representación procesada para detección
-    protocol: REST/HTTPS
-    style: sync
-    status: confirmed
-    source:
-      - SRC_DRIFT#Contrato-canonico-del-core
-      - SRC_DRIFT#Procesamiento-NLP
-      - SRC_DRIFT#Motor-AIOps-de-deteccion
-
-  - id: rel_anomaly_correlation
-    from: anomaly_detection_engine
     to: evidence_correlation_engine
-    label: Proporciona señales anómalas priorizadas
+    label: Entrega logs y evidencia procesada para correlación
     protocol: REST/HTTPS
     style: sync
     status: confirmed
     source:
-      - SRC_DRIFT#Contrato-canonico-del-core
-      - SRC_DRIFT#Responsabilidad-del-detector
-      - SRC_DRIFT#Correlacion-de-evidencia
+      - SRC_ADR_010
 
   - id: rel_correlation_postgresql
     from: evidence_correlation_engine
@@ -927,30 +842,6 @@ relationships:
       - SRC_DRIFT#Recuperacion-vectorial
       - SRC_DRIFT#Base-de-conocimiento-RAG
 
-  - id: rel_correlation_rag
-    from: evidence_correlation_engine
-    to: rag_retrieval
-    label: Proporciona contexto del incidente para recuperación
-    protocol: REST/HTTPS
-    style: sync
-    status: confirmed
-    source:
-      - SRC_DRIFT#Evidencia-antes-de-inferencia
-      - SRC_DRIFT#Correlacion-de-evidencia
-      - SRC_DRIFT#Base-de-conocimiento-RAG
-
-  - id: rel_rag_llm
-    from: rag_retrieval
-    to: pretrained_llm_diagnostic_service
-    label: Proporciona contexto recuperado y fuentes
-    protocol: REST/HTTPS
-    style: sync
-    status: confirmed
-    source:
-      - SRC_DRIFT#Entrada-del-LLM
-      - SRC_DRIFT#Evidencia-antes-de-inferencia
-      - SRC_DRIFT#Modelo-de-lenguaje
-
   - id: rel_github_github_actions
     from: github
     to: github_actions
@@ -961,19 +852,6 @@ relationships:
     source:
       - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
       - SRC_DRIFT#Integracion-con-la-plataforma-CI-CD
-
-  - id: rel_devsecops_sources_ingestion
-    from: optional_devsecops_sources
-    to: ingestion_normalization_service
-    label: Proporciona hallazgos autorizados como evidencia complementaria
-    protocol: REST/HTTPS
-    style: sync
-    access: read_only
-    status: confirmed
-    source:
-      - SRC_DRIFT#Scanners-DevSecOps
-      - SRC_DRIFT#Entorno-de-uso-de-scanners
-      - SRC_DRIFT#Captura-e-ingesta
 
   - id: rel_observability_sources_ingestion
     from: observability_sources
@@ -999,35 +877,192 @@ relationships:
       - SRC_CHARTER#Alcance-del-Proyecto
       - SRC_DRIFT#Human-in-the-Loop
 
+  - id: rel_correlation_recommendation
+    from: evidence_correlation_engine
+    to: recommendation_service
+    label: Entrega contexto correlacionado del incidente para diagnóstico asistido
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_015
+
+  - id: rel_recommendation_rag
+    from: recommendation_service
+    to: rag_retrieval
+    label: Solicita conocimiento contextual autorizado para el incidente
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_015
+
+  - id: rel_recommendation_llm
+    from: recommendation_service
+    to: pretrained_llm_diagnostic_service
+    label: Solicita inferencia diagnóstica con evidencia saneada y contexto RAG
+    protocol: Azure OpenAI API/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_004
+    - SRC_ADR_015
+
+  - id: rel_dashboard_entra
+    from: web_dashboard
+    to: entra_id
+    label: Autentica usuarios corporativos
+    protocol: OIDC/OAuth2/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_016
+
+  - id: rel_dashboard_apim
+    from: web_dashboard
+    to: api_management
+    label: Consume APIs protegidas del prototipo
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_006
+    - SRC_ADR_016
+
+  - id: rel_apim_pipeline_service
+    from: api_management
+    to: pipeline_service
+    label: Enruta consultas de pipelines y ejecuciones
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_006
+    - SRC_ADR_016
+
+  - id: rel_apim_log_event_service
+    from: api_management
+    to: log_event_service
+    label: Enruta consultas de logs, eventos y evidencias
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_006
+    - SRC_ADR_016
+
+  - id: rel_apim_recommendation_service
+    from: api_management
+    to: recommendation_service
+    label: Enruta consultas y operaciones de diagnóstico y revisión
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_003
+    - SRC_ADR_006
+    - SRC_ADR_016
+
+  - id: rel_recommendation_human_review
+    from: recommendation_service
+    to: human_review_component
+    label: Gestiona clasificación de riesgo y revisión humana
+    protocol: in-process
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_011
+    - SRC_ADR_016
+
+  - id: rel_human_review_postgresql
+    from: human_review_component
+    to: postgresql_operational_store
+    label: Persiste decisiones y trazabilidad de revisión humana
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_011
+    - SRC_ADR_016
+
+  - id: rel_github_actions_apim_diagnostic
+    from: github_actions
+    to: api_management
+    label: Consulta diagnostic_output para publicar el artifact del workflow
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    source:
+    - SRC_ADR_009
+    - SRC_ADR_016
+
 outputs:
   - id: diagnostic_hypothesis
     name: Hipótesis diagnóstica
     required: true
     fields:
-      - probable_cause
-      - evidence
-      - consulted_sources
-      - recommendation
-      - limitations
-      - confidence_when_applicable
+    - probable_cause
+    - evidence
+    - consulted_sources
+    - recommendation
+    - limitations
+    - confidence_when_applicable
     source:
-      - SRC_DRIFT#Resultado-automatico
+    - SRC_DRIFT#Resultado-automatico
+    produced_by: recommendation_service
 
   - id: github_actions_diagnostic_artifact
     name: Reporte de diagnóstico como artifact de GitHub Actions
     required: true
     publication_target: github_actions
-    format: null
+    format: implementation_detail
     source:
-      - SRC_CHARTER#Alcance-del-Proyecto
-      - SRC_DRIFT#Reporte-de-diagnostico
+    - SRC_CHARTER#Alcance-del-Proyecto
+    - SRC_DRIFT#Reporte-de-diagnostico
+    - SRC_ADR_009
+    produced_by: recommendation_service
+    published_by: github_actions
+    publication_mode: workflow_pull_then_native_upload
 
   - id: dashboard_output
     name: Dashboard Web
     required: true
     source:
-      - SRC_CHARTER#Alcance-del-Proyecto
-      - SRC_DRIFT#Dashboard
+    - SRC_CHARTER#Alcance-del-Proyecto
+    - SRC_DRIFT#Dashboard
+    produced_by: web_dashboard
+
+retention:
+  decision_status: closed
+  duration_days: 365
+  basis: corporate_policy
+  scope:
+    - logs
+    - diagnoses
+    - evidence
+  source:
+    - SRC_ADR_013
+
+audit_trail:
+  type: cross_cutting_capability
+  scope:
+    - diagnostic_generation
+    - evidence_usage
+    - human_review
+    - access_and_governance_events
+  correlation:
+    key: correlationId
+  persistence:
+    store: postgresql_operational_store
+  technical_observability:
+    platform: Azure Monitor
+    application_telemetry: Application Insights
+  source:
+    - SRC_ADR_011
 
 cross_cutting_controls:
   - id: CTRL-001
@@ -1055,6 +1090,15 @@ cross_cutting_controls:
   - id: CTRL-005
     name: Human-in-the-Loop
     required: true
+    review_record:
+      required_fields:
+        - diagnostic_id
+        - reviewer
+        - decision
+        - timestamp
+        - correlationId
+    source:
+      - SRC_ADR_011
 
   - id: CTRL-006
     name: Separación evaluación-RAG
@@ -1066,7 +1110,7 @@ architectural_invariants:
   - id: INV-001
     rule: >
       Ninguna evidencia potencialmente sensible puede alcanzar NLP,
-      detector AIOps, RAG o LLM sin pasar previamente por ingesta,
+      RAG o LLM sin pasar previamente por ingesta,
       normalización y protección de datos.
 
   - id: INV-002
@@ -1077,11 +1121,6 @@ architectural_invariants:
     rule: >
       El acceso del prototipo a GitHub/GitHub Actions es read-only
       por defecto y debe operar bajo mínimo privilegio.
-
-  - id: INV-004
-    rule: >
-      El Motor AIOps detecta y prioriza anomalías; no produce una
-      causa raíz confirmada.
 
   - id: INV-005
     rule: >
@@ -1104,8 +1143,11 @@ architectural_invariants:
 
   - id: INV-009
     rule: >
-      La duración de retención no puede codificarse hasta disponer
-      de política institucional o normativa aplicable.
+      Los logs, diagnósticos y evidencias sujetos a retención
+      deben conservarse durante 365 días conforme a la política
+      corporativa vigente registrada en ADR-013.
+    source:
+      - SRC_ADR_013
 
   - id: INV-010
     rule: >
@@ -1147,14 +1189,23 @@ deployment:
   containerization:
     required: true
     orchestrator:
-      status: open_question
-      technology: null
+      status: confirmed
+      technology: Azure Container Apps
+      source:
+        - SRC_ADR_001
 
   container_hosts:
+    ingestion_normalization_service:
+      environment: microsoft_azure
+      runtime: controlled_container_environment
+      concrete_service: Azure Container Apps
+      source:
+        - SRC_ADR_001
+
     pipeline_service:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
       status: confirmed
       source:
         - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B20:C20"
@@ -1163,56 +1214,45 @@ deployment:
     log_event_service:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
       status: confirmed
       source:
         - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B20:C20"
         - "tech_drift_resolutions.md#Contenedorizacion"
 
-    anomaly_detection_engine:
-      environment: microsoft_azure
-      runtime: controlled_container_environment
-      concrete_service: null
-      status: confirmed
-      source:
-        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B31:C31"
-        - "tech_drift_resolutions.md#Contenedorizacion"
-
     evidence_correlation_engine:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
       status: confirmed
       source:
         - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B32:C32"
         - "tech_drift_resolutions.md#Contenedorizacion"
+        - SRC_ADR_001
 
     recommendation_service:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
+      concrete_service: Azure Container Apps
       status: confirmed
       source:
         - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37"
         - "tech_drift_resolutions.md#Contenedorizacion"
+        - SRC_ADR_001
 
-    audit_service:
+    nlp_log_processor:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
-      status: confirmed
+      concrete_service: Azure Container Apps
       source:
-        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
-        - "tech_drift_resolutions.md#Contenedorizacion"
+      - SRC_ADR_015
 
-    reporting_service:
+    rag_retrieval:
       environment: microsoft_azure
       runtime: controlled_container_environment
-      concrete_service: null
-      status: confirmed
+      concrete_service: Azure Container Apps
       source:
-        - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B39:C39"
-        - "tech_drift_resolutions.md#Contenedorizacion"
+      - SRC_ADR_015
 
   event_broker:
     technology: Azure Service Bus
@@ -1227,117 +1267,44 @@ deployment:
     status: confirmed
 
   object_storage:
-    technology: null
-    status: open_question
+    technology: Azure Blob Storage
+    status: confirmed
 
   observability_platform:
-    technology: null
-    status: environment_dependent
+    technology: Azure Monitor
+    application_telemetry: Application Insights
+    status: confirmed
+    source:
+      - SRC_ADR_002
+
+  identity_and_api_perimeter:
+    identity_provider: Microsoft Entra ID
+    api_management: Azure API Management
+    status: confirmed
+    source:
+      - SRC_ADR_003
+
+  github_authentication:
+    mechanism: GitHub App
+    access: read_only
+    credential_type: installation_token
+    status: confirmed
+    source:
+      - SRC_ADR_005
 
   llm:
     strategy: pretrained_model_integrated
-    provider: null
+    provider: Azure OpenAI Service
+    model_family: GPT-4
     model: null
-    status: open_question
+    deployment_mode:
+      decision_status: closed
+      selected: service_api
+    status: confirmed
+    source:
+      - SRC_ADR_004
 
-open_questions:
-  - id: OQ-001
-    topic: anomaly_detection_engine
-    question: >
-      ¿Qué modelo existente/preentrenado se seleccionará como motor
-      AIOps de detección de anomalías?
-    current_candidate: LogBERT
-    blocks_final_view: true
-
-  - id: OQ-002
-    topic: log_parser
-    question: >
-      ¿Se utilizará Drain, Drain3 u otra implementación para parsing
-      y estructuración de logs?
-    blocks_final_view: false
-
-  - id: OQ-003
-    topic: embedding_model
-    question: >
-      ¿Qué modelo de embeddings/representación semántica se utilizará?
-    blocks_final_view: false
-
-  - id: OQ-004
-    topic: container_orchestrator
-    question: >
-      ¿Qué servicio Azure alojará/orquestará los componentes
-      contenedorizados del MVP?
-    blocks_final_view: true
-
-  - id: OQ-005
-    topic: observability_platform
-    question: >
-      ¿Qué plataforma o plataformas de observabilidad estarán
-      disponibles realmente en el entorno de validación?
-    blocks_final_view: true
-
-  - id: OQ-006
-    topic: identity_and_api_perimeter
-    question: >
-      ¿Qué mecanismos o servicios concretos implementarán identidad,
-      autenticación, autorización y exposición de APIs?
-    blocks_final_view: true
-
-  - id: OQ-007
-    topic: object_storage
-    question: >
-      ¿Qué servicio se utilizará para almacenar logs extensos,
-      artefactos y evidencias pesadas?
-    blocks_final_view: true
-
-  - id: OQ-008
-    topic: llm_provider
-    question: >
-      ¿Qué proveedor/modelo preentrenado y qué modalidad de despliegue
-      serán autorizados para el MVP?
-    blocks_final_view: true
-
-  - id: OQ-009
-    topic: github_authentication
-    question: >
-      ¿Qué mecanismo autorizado implementará el acceso read-only
-      a GitHub y GitHub Actions?
-    blocks_final_view: true
-
-  - id: OQ-010
-    topic: service_bus_topology
-    question: >
-      ¿La topología de Azure Service Bus utilizará queues, topics,
-      subscriptions u otra combinación?
-    blocks_final_view: false
-
-  - id: OQ-012
-    topic: retention
-    question: >
-      ¿Qué política institucional o del entorno de validación definirá
-      la retención de logs, diagnósticos y evidencias?
-    blocks_final_view: false
-
-  - id: OQ-013
-    topic: report_format
-    question: >
-      ¿Cuál será el formato técnico del reporte descargable publicado
-      como artifact de GitHub Actions?
-    blocks_final_view: false
-
-  - id: OQ-014
-    topic: optional_devsecops_integration
-    question: >
-      ¿Cuáles de Checkmarx, Mend y Wiz se integrarán efectivamente
-      durante el MVP y mediante qué interfaces autorizadas?
-    blocks_final_view: false
-
-  - id: OQ-015
-    topic: dashboard_backend_contract
-    question: >
-      ¿Qué componente y contrato expondrá incidentes, diagnósticos,
-      evidencias y revisiones humanas al dashboard?
-    blocks_final_view: true
+open_questions: []
 
 conflicts:
   resolved:
@@ -1378,12 +1345,6 @@ conflicts:
       canonical: Azure Service Bus
       resolved_by: SRC_DRIFT
 
-    - id: CF-006
-      topic: anomaly_detector
-      obsolete: LogBERT presentado como selección definitiva
-      canonical: Motor AIOps lógico con selección tecnológica abierta
-      resolved_by: SRC_DRIFT
-
     - id: CF-007
       topic: diagnosis_semantics
       obsolete: Causa raíz generada automáticamente
@@ -1405,8 +1366,10 @@ conflicts:
     - id: CF-010
       topic: observability_products
       obsolete: Loki / Prometheus u otros productos como componentes obligatorios
-      canonical: Fuente de observabilidad compatible, producto no fijado
-      resolved_by: SRC_DRIFT
+      canonical: Azure Monitor como plataforma de observabilidad y Application Insights para telemetría de aplicación
+      resolved_by:
+        - SRC_DRIFT
+        - SRC_ADR_002
 
   unresolved: []
 
@@ -1416,7 +1379,7 @@ views:
   # PHYSICAL 01
   # Entrada al prototipo y desacoplamiento mediante mensajería
   #
-  # 6 architectural nodes
+  # 5 architectural nodes
   # ----------------------------------------------------------
   - id: physical_01_ingestion
     kind: physical
@@ -1433,7 +1396,6 @@ views:
     elements:
       - github
       - github_actions
-      - optional_devsecops_sources
       - observability_sources
       - ingestion_normalization_service
       - azure_service_bus
@@ -1452,26 +1414,25 @@ views:
   # PHYSICAL 02
   # Core analítico AIOps
   #
-  # 9 architectural nodes
+  # 8 architectural nodes
   # ----------------------------------------------------------
   - id: physical_02_aiops_core
     kind: physical
     title: "Vista Física 02 — Procesamiento AIOps y Diagnóstico Asistido"
     purpose: >
       Mostrar el núcleo de procesamiento del prototipo desde la gestión
-      del contexto operacional hasta la detección de anomalías,
-      correlación de evidencias, recuperación RAG, inferencia mediante
+      del contexto operacional de fallos identificados por GitHub Actions
+      hasta el parsing, correlación de evidencias, recuperación RAG, inferencia mediante
       LLM preentrenado y generación inicial de recomendaciones.
 
     status: draft
     final: false
-    include_external: false
+    include_external: true
 
     elements:
       - pipeline_service
       - log_event_service
       - nlp_log_processor
-      - anomaly_detection_engine
       - evidence_correlation_engine
       - rag_retrieval
       - pgvector_knowledge_store
@@ -1482,7 +1443,6 @@ views:
       - SRC_CHARTER#Objetivos-Especificos
       - SRC_CHARTER#Alcance-del-Proyecto
       - SRC_DRIFT#Procesamiento-NLP
-      - SRC_DRIFT#Responsabilidad-del-detector
       - SRC_DRIFT#Correlacion-de-evidencia
       - SRC_DRIFT#Base-de-conocimiento-RAG
       - SRC_DRIFT#Modelo-de-lenguaje
@@ -1495,7 +1455,7 @@ views:
   # PHYSICAL 03
   # Persistencia, gobierno y consumo
   #
-  # 8 architectural nodes
+  # 6 architectural nodes
   # ----------------------------------------------------------
   - id: physical_03_governance_consumption
     kind: physical
@@ -1512,13 +1472,11 @@ views:
 
     elements:
       - technical_users
-      - access_and_governance_controls
-      - audit_service
-      - reporting_service
+      - entra_id
+      - api_management
       - postgresql_operational_store
       - object_evidence_store
       - web_dashboard
-      - optional_notification_channels
 
     source:
       - SRC_CHARTER#Alcance-del-Proyecto
@@ -1528,5 +1486,4 @@ views:
       - SRC_DRIFT#Separacion-de-almacenamiento
       - SRC_DRIFT#Dashboard
       - SRC_DRIFT#Reporte-de-diagnostico
-      - SRC_DRIFT#Canales-corporativos-de-notificacion
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C39"
