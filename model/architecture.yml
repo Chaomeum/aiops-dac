@@ -1,10 +1,10 @@
 architecture:
   id: ey_aiops_ci_cd_diagnosis
   name: Prototipo AIOps para diagnóstico de fallos CI/CD
-  model_version: "0.1.0-phase1"
-  phase: "phase_1_foundations"
+  model_version: "0.3.0-physical-views"
+  phase: "phase_3_physical_views"
   status: draft
-  renderable: false
+  renderable: true
 
   view_constraints:
     max_nodes_per_view: 15
@@ -1410,4 +1410,123 @@ conflicts:
 
   unresolved: []
 
-views: []
+views:
+
+  # ----------------------------------------------------------
+  # PHYSICAL 01
+  # Entrada al prototipo y desacoplamiento mediante mensajería
+  #
+  # 6 architectural nodes
+  # ----------------------------------------------------------
+  - id: physical_01_ingestion
+    kind: physical
+    title: "Vista Física 01 — Fuentes, Ingesta y Mensajería"
+    purpose: >
+      Mostrar las fuentes externas autorizadas que originan evidencia
+      operacional, su ingreso controlado al prototipo y el desacoplamiento
+      inicial mediante mensajería asíncrona.
+
+    status: draft
+    final: false
+    include_external: true
+
+    elements:
+      - github
+      - github_actions
+      - optional_devsecops_sources
+      - observability_sources
+      - ingestion_normalization_service
+      - azure_service_bus
+
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Repositorio-y-plataforma-CI-CD-principal
+      - SRC_DRIFT#Captura-e-ingesta
+      - SRC_DRIFT#Proteccion-de-informacion-sensible
+      - SRC_DRIFT#Broker-de-eventos
+      - SRC_DRIFT#Contrato-canonico-del-core
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B21:C27"
+
+
+  # ----------------------------------------------------------
+  # PHYSICAL 02
+  # Core analítico AIOps
+  #
+  # 9 architectural nodes
+  # ----------------------------------------------------------
+  - id: physical_02_aiops_core
+    kind: physical
+    title: "Vista Física 02 — Procesamiento AIOps y Diagnóstico Asistido"
+    purpose: >
+      Mostrar el núcleo de procesamiento del prototipo desde la gestión
+      del contexto operacional hasta la detección de anomalías,
+      correlación de evidencias, recuperación RAG, inferencia mediante
+      LLM preentrenado y generación inicial de recomendaciones.
+
+    status: draft
+    final: false
+    include_external: false
+
+    elements:
+      - pipeline_service
+      - log_event_service
+      - nlp_log_processor
+      - anomaly_detection_engine
+      - evidence_correlation_engine
+      - rag_retrieval
+      - pgvector_knowledge_store
+      - pretrained_llm_diagnostic_service
+      - recommendation_service
+
+    source:
+      - SRC_CHARTER#Objetivos-Especificos
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_DRIFT#Procesamiento-NLP
+      - SRC_DRIFT#Responsabilidad-del-detector
+      - SRC_DRIFT#Correlacion-de-evidencia
+      - SRC_DRIFT#Base-de-conocimiento-RAG
+      - SRC_DRIFT#Modelo-de-lenguaje
+      - SRC_DRIFT#Resultado-automatico
+      - SRC_DRIFT#Contrato-canonico-del-core
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C37"
+
+
+  # ----------------------------------------------------------
+  # PHYSICAL 03
+  # Persistencia, gobierno y consumo
+  #
+  # 8 architectural nodes
+  # ----------------------------------------------------------
+  - id: physical_03_governance_consumption
+    kind: physical
+    title: "Vista Física 03 — Persistencia, Gobierno y Consumo Operativo"
+    purpose: >
+      Mostrar la persistencia operacional y de evidencias, los controles
+      de gobierno y auditoría, la publicación del diagnóstico y los
+      mecanismos mediante los cuales los usuarios técnicos consultan,
+      revisan y validan los resultados del prototipo.
+
+    status: draft
+    final: false
+    include_external: true
+
+    elements:
+      - technical_users
+      - access_and_governance_controls
+      - audit_service
+      - reporting_service
+      - postgresql_operational_store
+      - object_evidence_store
+      - web_dashboard
+      - optional_notification_channels
+
+    source:
+      - SRC_CHARTER#Alcance-del-Proyecto
+      - SRC_CHARTER#Suposiciones-y-Restricciones
+      - SRC_DRIFT#Human-in-the-Loop
+      - SRC_DRIFT#Persistencia-estructurada
+      - SRC_DRIFT#Separacion-de-almacenamiento
+      - SRC_DRIFT#Dashboard
+      - SRC_DRIFT#Reporte-de-diagnostico
+      - SRC_DRIFT#Canales-corporativos-de-notificacion
+      - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C39"
