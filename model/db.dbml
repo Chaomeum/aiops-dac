@@ -1,0 +1,395 @@
+// GENERATED — DO NOT EDIT. SSOT: model/domain.yml
+Project aiops_persistent_domain {
+  database_type: 'PostgreSQL'
+  Note: 'ADR-018: una instancia PostgreSQL; CQRS lógico; sin Event Sourcing. Referencias cross-schema por ID sin FK física.'
+}
+
+Enum audit.AuditCategory {
+  diagnostic_generation
+  evidence_usage
+  human_review
+  access_and_governance_events
+}
+
+Enum diagnosis.DiagnosisStatus {
+  ANALYZING
+  DIAGNOSIS_READY
+  INCONCLUSIVE
+}
+
+Enum diagnosis.HumanReviewDecision {
+  CONFIRMED
+  CORRECTED
+  REJECTED
+}
+
+Enum evidence.PipelineStage {
+  BUILD
+  TESTING
+  QUALITY_GATE
+  DEPLOYMENT
+  CONTAINER
+  INFRASTRUCTURE
+}
+
+Enum knowledge.KnowledgeCorpusKind {
+  reviewed_incidents
+  authorized_technical_documentation
+  authorized_response_procedures
+}
+
+Enum ops.AccessCapability {
+  VIEW
+  OPERATE
+  CONFIGURE
+}
+
+Enum ops.IncidentRunRole {
+  ORIGIN
+  VERIFICATION
+}
+
+Enum ops.IncidentStatus {
+  OPEN
+  IN_REMEDIATION
+  VERIFICATION
+  RESOLVED
+}
+
+Enum ops.MonitoringStatus {
+  ACTIVE
+  PAUSED
+}
+
+Enum ops.PipelineCriticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+Enum ops.PipelineStage {
+  BUILD
+  TESTING
+  QUALITY_GATE
+  DEPLOYMENT
+  CONTAINER
+  INFRASTRUCTURE
+}
+
+Enum ops.Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+Table ops.repositories {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_CHARTER#Alcance-del-Proyecto, architecture.yml#github, DD-001']
+  github_repository_id text [not null, unique, note: 'ID externo del repositorio GitHub. Assumption: A-003. Fuente: SRC_CHARTER#Alcance-del-Proyecto, architecture.yml#github, DD-001']
+  full_name text [not null, note: 'Nombre owner/repository para presentación. Fuente: SRC_CHARTER#Alcance-del-Proyecto, architecture.yml#github, DD-001']
+  default_branch text [null, note: 'Rama por defecto suministrada por GitHub. Fuente: SRC_CHARTER#Alcance-del-Proyecto, architecture.yml#github, DD-001']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  Note: 'Repositorio GitHub autorizado; entidad distinta del workflow monitorizado. Owner: pipeline_service. approved_domain / confirmed.'
+}
+
+Table ops.pipelines {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  repository_id uuid [not null, note: 'Repositorio del workflow. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  github_workflow_id text [not null, note: 'ID externo del workflow, único dentro de su repositorio. Assumption: A-003. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  workflow_name text [not null, note: 'Nombre del workflow monitorizado. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  workflow_file text [not null, note: 'Ruta declarada del workflow. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  environment text [null, note: 'Entorno operacional suministrado por configuración autorizada. Fuente: SRC_ADR_018, architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-001']
+  criticality ops.PipelineCriticality [not null, note: 'Criticidad del pipeline; distinta de la severidad del incidente. Fuente: docs/research/arquitectura-informacion.md']
+  monitoring_status ops.MonitoringStatus [not null, note: 'Estado de monitorización. Fuente: docs/research/arquitectura-informacion.md']
+  responsible_team_ref text [null, note: 'Referencia externa al equipo responsable; sin tabla teams. Fuente: docs/research/arquitectura-informacion.md']
+  responsible_team_name_snapshot text [null, note: 'Nombre del equipo al registrar configuración. Fuente: docs/research/arquitectura-informacion.md']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (repository_id, github_workflow_id) [unique, name: 'pipelines_repository_id_github_workflow_id_uq']
+  }
+  Note: 'Pipeline equivale directamente a un GitHub Actions workflow monitorizado. Owner: pipeline_service. approved_domain / confirmed.'
+}
+
+Table ops.pipeline_executions {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  pipeline_id uuid [not null, note: 'Pipeline que fue ejecutado. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  github_run_id text [not null, note: 'ID externo del run. Assumption: A-003. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  run_attempt integer [not null, note: 'Intento del run; distingue reejecuciones del mismo ID externo. Assumption: A-003. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  branch text [not null, note: 'Rama ejecutada. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  commit_sha text [not null, note: 'Referencia al commit ejecutado. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  external_status text [not null, note: 'Estado del run suministrado por GitHub; no define un enum interno nuevo. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  external_conclusion text [null, note: 'Conclusión externa cuando está disponible. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  failed boolean [not null, note: 'Indica un fallo identificado por GitHub Actions; no representa detección AIOps. Assumption: A-004. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  started_at timestamptz [null, note: 'Inicio de ejecución. Assumption: A-002. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  completed_at timestamptz [null, note: 'Fin de ejecución. Assumption: A-002. Fuente: architecture.yml#pipeline_service, SRC_ADR_010, DD-002']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (pipeline_id, github_run_id, run_attempt) [unique, name: 'pipeline_executions_pipeline_id_github_run_id_run_attempt_uq']
+  }
+  checks {
+    `run_attempt > 0` [name: 'pipeline_executions_check_1']
+  }
+  Note: 'Ejecución de un workflow; conserva contexto GitHub Actions y resultado de fallo autorizado. Owner: pipeline_service. approved_domain / confirmed.'
+}
+
+Table ops.execution_stages {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  execution_id uuid [not null, note: 'Ejecución a la que pertenece la etapa. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  stage ops.PipelineStage [not null, note: 'Etapa operacional normalizada; no es nivel de log. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  external_status text [null, note: 'Estado de etapa suministrado por evidencia autorizada. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  started_at timestamptz [null, note: 'Inicio observado de la etapa. Assumption: A-002. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  completed_at timestamptz [null, note: 'Fin observado de la etapa. Assumption: A-002. Fuente: architecture.yml#pipeline_service, docs/research/arquitectura-informacion.md, DD-013']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (execution_id, stage) [unique, name: 'execution_stages_execution_id_stage_uq']
+  }
+  Note: 'Etapas de una ejecución; los jobs pueden suministrar evidencia sin tablas adicionales. Owner: pipeline_service. approved_domain / confirmed.'
+}
+
+Table ops.incidents {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  pipeline_id uuid [not null, note: 'Pipeline del incidente; debe coincidir con el de su ORIGIN. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  status ops.IncidentStatus [not null, note: 'Estado operacional del incidente. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  severity ops.Severity [null, note: 'Severidad operacional; nullable hasta disponer de regla aprobada de derivación. Assumption: A-005. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  stage ops.PipelineStage [not null, note: 'Etapa del fallo. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  summary text [not null, note: 'Resumen saneado del fallo observado. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  assignee_ref text [null, note: 'Referencia externa a identidad corporativa Entra ID; distinta de ownership del pipeline. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  assignee_display_name_snapshot text [null, note: 'Nombre del assignee al asignar; no es maestro de identidad. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  detected_at timestamptz [not null, note: 'Instante de detección del fallo; origen del cálculo TMD. Assumption: A-002. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  remediation_started_at timestamptz [null, note: 'Start remediation registra estado y tiempo; no ejecuta correcciones. Assumption: A-002. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  verification_started_at timestamptz [null, note: 'Inicio de verificación bajo control humano. Assumption: A-002. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  resolved_at timestamptz [null, note: 'Resolución operacional del incidente. Assumption: A-002. Fuente: SRC_ADR_018, architecture.yml#INV-007, docs/research/arquitectura-informacion.md, DD-002']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  Note: 'Incidente originado en una ejecución fallida, con asignación y tiempos operacionales. Owner: pipeline_service. approved_domain / confirmed. Constraints complementarias en extras.sql: exactly_one_failed_origin, origin_pipeline_consistency.'
+}
+
+Table ops.incident_runs {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_018, model/domain_decisions.md, DD-002']
+  incident_id uuid [not null, note: 'Incidente propietario de la relación. Fuente: SRC_ADR_018, model/domain_decisions.md, DD-002']
+  execution_id uuid [not null, note: 'Ejecución ORIGIN o VERIFICATION; no fija política adicional del workflow de verificación. Fuente: SRC_ADR_018, model/domain_decisions.md, DD-002']
+  role ops.IncidentRunRole [not null, note: 'Rol del run en el incidente. Fuente: SRC_ADR_018, model/domain_decisions.md, DD-002']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (incident_id, execution_id) [unique, name: 'incident_runs_incident_id_execution_id_uq']
+  }
+  Note: 'Vincula un incidente con exactamente un ORIGIN fallido y cero o más VERIFICATION. Owner: pipeline_service. approved_domain / confirmed. Constraints complementarias en extras.sql: at_most_one_origin.'
+}
+
+Table ops.pipeline_access_grants {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: docs/research/arquitectura-informacion.md, SRC_ADR_003, DD-017']
+  pipeline_id uuid [not null, note: 'Pipeline al que corresponde la capacidad. Fuente: docs/research/arquitectura-informacion.md, SRC_ADR_003, DD-017']
+  principal_ref text [not null, note: 'Referencia controlada a principal corporativo Entra ID; sin tabla users/roles. Fuente: docs/research/arquitectura-informacion.md, SRC_ADR_003, DD-017']
+  capability ops.AccessCapability [not null, note: 'Capacidad funcional propuesta por arquitectura de información. Fuente: docs/research/arquitectura-informacion.md, SRC_ADR_003, DD-017']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (pipeline_id, principal_ref, capability) [unique, name: 'pipeline_access_grants_pipeline_id_principal_ref_capability_uq']
+  }
+  Note: 'Representación provisional de capacidades por pipeline; no requisito core ni implementación definitiva RBAC. Owner: pipeline_service. ia_only / inferred.'
+}
+
+Table evidence.evidence_items {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  incident_id uuid [not null, note: 'Incidente asociado por ID lógico. Referencia lógica a ops.incidents.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  execution_id uuid [not null, note: 'Ejecución observada por ID lógico. Referencia lógica a ops.pipeline_executions.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  source text [not null, note: 'Procedencia operacional autorizada, independiente de provenance RAG. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  stage evidence.PipelineStage [not null, note: 'Etapa operacional observada. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  job text [null, note: 'Job externo cuando existe. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  summary text [not null, note: 'Resumen normalizado y saneado. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  excerpt text [null, note: 'Extracto minimizado y enmascarado; nunca payload sensible crudo. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  observed_at timestamptz [not null, note: 'Instante observado en la fuente. Assumption: A-002. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  sequence bigint [null, note: 'Orden de evidencia cuando la fuente lo proporciona. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  storage_container text [null, note: 'Nombre de container Blob; sin tokens, credenciales ni URL SAS. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  blob_object_key text [null, note: 'Clave del objeto Blob; sin SAS ni material secreto. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  content_hash text [null, note: 'Hash del objeto cuando existe; algoritmo no fijado. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  size_bytes bigint [null, note: 'Tamaño externo en bytes cuando está disponible. Fuente: architecture.yml#log_event_service, architecture.yml#object_evidence_store, architecture.yml#INV-001, SRC_ADR_013, DD-006']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  checks {
+    `size_bytes IS NULL OR size_bytes >= 0` [name: 'evidence_items_check_1']
+    `(storage_container IS NULL) = (blob_object_key IS NULL)` [name: 'evidence_items_check_2']
+  }
+  Note: 'Metadata y extracto normalizado; logs grandes en Azure Blob Storage por referencia sin SAS ni secretos. Owner: log_event_service. approved_domain / confirmed.'
+}
+
+Table evidence.correlated_contexts {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#evidence_correlation_engine, SRC_ADR_015, DD-014']
+  incident_id uuid [not null, note: 'Incidente del contexto. Referencia lógica a ops.incidents.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#evidence_correlation_engine, SRC_ADR_015, DD-014']
+  execution_id uuid [not null, note: 'Ejecución correlacionada; no fusionar ejecuciones no relacionadas. Referencia lógica a ops.pipeline_executions.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#evidence_correlation_engine, SRC_ADR_015, DD-014']
+  evidence_ids uuid[] [not null, note: 'Colección de IDs lógicos de evidencia; otro servicio no modifica evidence_items. Referencia lógica a evidence.evidence_items.id; sin FK física ni navegación ORM cross-context. Assumption: A-006. Fuente: architecture.yml#evidence_correlation_engine, SRC_ADR_015, DD-014']
+  summary text [not null, note: 'Síntesis saneada del contexto operacional. Fuente: architecture.yml#evidence_correlation_engine, SRC_ADR_015, DD-014']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  Note: 'Snapshot saneado del contexto correlacionado; conserva los IDs de evidencia utilizados. Owner: evidence_correlation_engine. approved_domain / confirmed.'
+}
+
+Table diagnosis.diagnoses {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  incident_id uuid [not null, note: 'Incidente por referencia lógica; sin asociación JPA cross-context. Referencia lógica a ops.incidents.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  version integer [not null, note: 'Versión positiva, única por incidente; cada nuevo snapshot se inserta. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  status diagnosis.DiagnosisStatus [not null, note: 'Estado diagnóstico del snapshot. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  probable_cause text [null, note: 'Hipótesis de causa probable; obligatoria cuando DIAGNOSIS_READY. Assumption: A-007. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  explanation text [null, note: 'Explicación saneada del diagnóstico. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  limitations text [null, note: 'Limitaciones de evidencia/inferencia. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  confidence jsonb [null, note: 'Valor informado por el proveedor, sin imponer tipo numérico, escala ni rango. Assumption: A-008. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  diagnosis_ready_at timestamptz [null, note: 'Instante de disponibilidad de esta versión; TMD se calcula con detected_at del incidente. Assumption: A-002. Fuente: architecture.yml#recommendation_service, architecture.yml#INV-005, SRC_ADR_013, DD-003']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (incident_id, version) [unique, name: 'diagnoses_incident_id_version_uq']
+  }
+  checks {
+    `version > 0` [name: 'diagnoses_check_1']
+    `status <> 'DIAGNOSIS_READY' OR (probable_cause IS NOT NULL AND btrim(probable_cause) <> '' AND diagnosis_ready_at IS NOT NULL)` [name: 'diagnoses_check_2']
+  }
+  Note: 'Snapshot diagnóstico versionado append-only; actual = versión mayor por incidente. Owner: recommendation_service. approved_domain / confirmed. Constraints complementarias en extras.sql: append_only.'
+}
+
+Table diagnosis.recommendations {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#recommendation_service, SRC_ADR_016, SRC_ADR_013, DD-004']
+  diagnosis_id uuid [not null, note: 'Versión que propone la recomendación. Fuente: architecture.yml#recommendation_service, SRC_ADR_016, SRC_ADR_013, DD-004']
+  description text [not null, note: 'Procedimiento o acción recomendada para evaluación humana. Fuente: architecture.yml#recommendation_service, SRC_ADR_016, SRC_ADR_013, DD-004']
+  critical boolean [not null, note: 'Marcado de recomendación crítica para gobierno humano. Fuente: architecture.yml#human_review_component']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  Note: 'Recomendación como entidad propia de una versión diagnóstica; no ejecuta remediación. Owner: recommendation_service. approved_domain / confirmed.'
+}
+
+Table diagnosis.diagnosis_evidence_links {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#diagnostic_output_component, SRC_ADR_013, DD-006']
+  diagnosis_id uuid [not null, note: 'Versión diagnóstica sustentada. Fuente: architecture.yml#diagnostic_output_component, SRC_ADR_013, DD-006']
+  evidence_id uuid [not null, note: 'Evidencia operacional consultada por ID lógico. Referencia lógica a evidence.evidence_items.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#diagnostic_output_component, SRC_ADR_013, DD-006']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (diagnosis_id, evidence_id) [unique, name: 'diagnosis_evidence_links_diagnosis_id_evidence_id_uq']
+  }
+  Note: 'Traza qué evidencia operacional sustenta una versión diagnóstica. Owner: recommendation_service. approved_domain / confirmed.'
+}
+
+Table diagnosis.diagnosis_source_links {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#diagnostic_output_component, architecture.yml#rag_retrieval, SRC_ADR_013, DD-007']
+  diagnosis_id uuid [not null, note: 'Versión diagnóstica que consultó RAG. Fuente: architecture.yml#diagnostic_output_component, architecture.yml#rag_retrieval, SRC_ADR_013, DD-007']
+  knowledge_chunk_id uuid [not null, note: 'Chunk consultado; documento reconstruible mediante FK de knowledge_chunks. Referencia lógica a knowledge.knowledge_chunks.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#diagnostic_output_component, architecture.yml#rag_retrieval, SRC_ADR_013, DD-007']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (diagnosis_id, knowledge_chunk_id) [unique, name: 'diagnosis_source_links_diagnosis_id_knowledge_chunk_id_uq']
+  }
+  Note: 'Traza consulted_sources: Diagnosis → KnowledgeChunk → KnowledgeDocument. Owner: recommendation_service. approved_domain / confirmed.'
+}
+
+Table diagnosis.human_reviews {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  diagnostic_id uuid [not null, note: 'Versión revisada; conserva el nombre contractual diagnostic_id de ADR-011. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  reviewer_ref text [not null, note: 'Identidad externa del revisor corporativo; mapea reviewer del contrato. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  decision diagnosis.HumanReviewDecision [not null, note: 'CONFIRMED acepta; CORRECTED aporta causa corregida; REJECTED rechaza sin alternativa validada. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  timestamp timestamptz [not null, note: 'Instante de revisión del contrato. Assumption: A-002. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  actual_cause text [null, note: 'Causa corregida suministrada por el revisor; requerida semánticamente en CORRECTED. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  comment text [null, note: 'Comentario saneado del revisor. Fuente: SRC_ADR_011, SRC_ADR_016, architecture.yml#INV-006, SRC_ADR_013, DD-005']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  checks {
+    `decision <> 'CORRECTED' OR (actual_cause IS NOT NULL AND btrim(actual_cause) <> '')` [name: 'human_reviews_check_1']
+  }
+  Note: 'Revisión humana: ausencia = PENDING derivado; decision solo CONFIRMED, CORRECTED o REJECTED. Owner: recommendation_service. approved_domain / confirmed.'
+}
+
+Table knowledge.knowledge_documents {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: architecture.yml#rag_retrieval, architecture.yml#INV-010, SRC_ADR_007, DD-007']
+  corpus_kind knowledge.KnowledgeCorpusKind [not null, note: 'Clase de corpus autorizado. Fuente: architecture.yml#rag_retrieval, architecture.yml#INV-010, SRC_ADR_007, DD-007']
+  title text [not null, note: 'Título de la fuente autorizada. Fuente: architecture.yml#rag_retrieval, architecture.yml#INV-010, SRC_ADR_007, DD-007']
+  provenance text [not null, note: 'Referencia obligatoria de origen autorizado; nunca URL con tokens o secretos. Fuente: architecture.yml#rag_retrieval, architecture.yml#INV-010, SRC_ADR_007, DD-007']
+  reviewed_incident_id uuid [null, note: 'Incidente revisado cuando el corpus es reviewed_incidents; elegibilidad RAG requiere separación evaluación. Referencia lógica a ops.incidents.id; sin FK física ni navegación ORM cross-context. Fuente: architecture.yml#rag_retrieval, architecture.yml#INV-010, SRC_ADR_007, DD-007']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  checks {
+    `btrim(provenance) <> ''` [name: 'knowledge_documents_check_1']
+    `corpus_kind <> 'reviewed_incidents' OR reviewed_incident_id IS NOT NULL` [name: 'knowledge_documents_check_2']
+  }
+  Note: 'Corpus autorizado; prohíbe casos de evaluación y soluciones de referencia conforme a INV-010. Owner: rag_retrieval. approved_domain / confirmed.'
+}
+
+Table knowledge.knowledge_chunks {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  document_id uuid [not null, note: 'Documento de procedencia; permite reconstruir fuentes. Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  chunk_index integer [not null, note: 'Posición del chunk dentro del documento. Assumption: A-009. Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  content text [not null, note: 'Fragmento autorizado y saneado; nunca casos/soluciones de evaluación. Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  provenance text [not null, note: 'Procedencia obligatoria del fragmento dentro de su documento. Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  embedding vector [null, note: 'Embedding pgvector; dimensión abierta, sin vector(n). Fuente: SRC_ADR_007, architecture.yml#INV-010, DD-009']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  indexes {
+    (document_id, chunk_index) [unique, name: 'knowledge_chunks_document_id_chunk_index_uq']
+  }
+  checks {
+    `chunk_index >= 0` [name: 'knowledge_chunks_check_1']
+    `btrim(provenance) <> ''` [name: 'knowledge_chunks_check_2']
+  }
+  Note: 'Chunks recuperables de documentos autorizados; conserva provenance y pgvector sin dimensión fija. Owner: rag_retrieval. approved_domain / confirmed.'
+}
+
+Table audit.audit_events {
+  id uuid [pk, not null, note: 'Identificador estable asignado por el servicio propietario. Assumption: A-001. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  category audit.AuditCategory [not null, note: 'Categoría funcional declarada en architecture.yml. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  correlation_id text [not null, note: 'Identificador de correlación end-to-end; no contiene información sensible. Fuente: architecture.yml#CTRL-003']
+  actor_ref text [null, note: 'Identidad externa del actor cuando está disponible. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  entity_type text [not null, note: 'Tipo de objeto auditado; referencia polimórfica lógica. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  entity_id text [not null, note: 'ID lógico del objeto auditado; sin FK polimórfica. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  action text [not null, note: 'Acción funcional observada. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  before_state jsonb [null, note: 'Solo metadata sanitizada previa; prohíbe raw logs/payload sensible no enmascarado. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  after_state jsonb [null, note: 'Solo metadata sanitizada posterior; prohíbe secrets, tokens y credentials. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  occurred_at timestamptz [not null, note: 'Instante de ocurrencia del evento funcional. Assumption: A-002. Fuente: SRC_ADR_011, architecture.yml#audit_trail, architecture.yml#CTRL-002, DD-016']
+  created_at timestamptz [not null, note: 'Instante de persistencia; permite aplicar retención cuando corresponde. Assumption: A-002. Fuente: SRC_ADR_013, DD-015']
+  Note: 'Auditoría funcional transversal; before/after contienen solo metadata sanitizada, jamás logs crudos, secretos, tokens o credenciales. Owner: shared. approved_domain / confirmed.'
+}
+
+Ref pipelines_repository_id: ops.pipelines.repository_id > ops.repositories.id
+Ref pipeline_executions_pipeline_id: ops.pipeline_executions.pipeline_id > ops.pipelines.id
+Ref execution_stages_execution_id: ops.execution_stages.execution_id > ops.pipeline_executions.id
+Ref incidents_pipeline_id: ops.incidents.pipeline_id > ops.pipelines.id
+Ref incident_runs_incident_id: ops.incident_runs.incident_id > ops.incidents.id
+Ref incident_runs_execution_id: ops.incident_runs.execution_id > ops.pipeline_executions.id
+Ref pipeline_access_grants_pipeline_id: ops.pipeline_access_grants.pipeline_id > ops.pipelines.id
+Ref recommendations_diagnosis_id: diagnosis.recommendations.diagnosis_id > diagnosis.diagnoses.id
+Ref diagnosis_evidence_links_diagnosis_id: diagnosis.diagnosis_evidence_links.diagnosis_id > diagnosis.diagnoses.id
+Ref diagnosis_source_links_diagnosis_id: diagnosis.diagnosis_source_links.diagnosis_id > diagnosis.diagnoses.id
+Ref human_reviews_diagnostic_id: diagnosis.human_reviews.diagnostic_id > diagnosis.diagnoses.id
+Ref knowledge_chunks_document_id: knowledge.knowledge_chunks.document_id > knowledge.knowledge_documents.id
+
+TableGroup ops {
+  ops.repositories
+  ops.pipelines
+  ops.pipeline_executions
+  ops.execution_stages
+  ops.incidents
+  ops.incident_runs
+  ops.pipeline_access_grants
+}
+
+TableGroup evidence {
+  evidence.evidence_items
+  evidence.correlated_contexts
+}
+
+TableGroup diagnosis {
+  diagnosis.diagnoses
+  diagnosis.recommendations
+  diagnosis.diagnosis_evidence_links
+  diagnosis.diagnosis_source_links
+  diagnosis.human_reviews
+}
+
+TableGroup knowledge {
+  knowledge.knowledge_documents
+  knowledge.knowledge_chunks
+}
+
+TableGroup audit {
+  audit.audit_events
+}
