@@ -128,6 +128,53 @@ class ArchitectureValidationTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assert_rejected(message, model)
 
+    def component_view(self):
+        return {"id": "zoom", "kind": "c4_component", "container": "producer",
+                "zoom_target": "producer", "elements": ["review", "gateway"],
+                "final": False}
+
+    def test_view_membership_must_reference_existing_elements(self):
+        self.model["views"] = [{"id": "view", "elements": ["missing"]}]
+        self.assert_rejected("view: unknown view element: missing")
+
+    def test_node_limit_comes_from_architecture(self):
+        self.model["architecture"] = {"view_constraints": {"max_nodes_per_view": 1}}
+        self.model["views"] = [self.component_view()]
+        self.assert_rejected("zoom: 2 nodes exceeds limit of 1")
+
+    def test_component_zoom_requires_matching_existing_containers(self):
+        cases = [
+            ({"container": None}, "container must reference a valid container"),
+            ({"zoom_target": "missing"}, "zoom_target must reference a valid container"),
+            ({"container": "publisher"}, "container must reference a valid container"),
+            ({"zoom_target": "gateway"}, "container and zoom_target must match"),
+        ]
+        for changes, message in cases:
+            with self.subTest(changes=changes):
+                model = deepcopy(self.model)
+                model["views"] = [{**self.component_view(), **changes}]
+                self.assert_rejected(message, model)
+
+    def test_component_zoom_rejects_a_different_parent(self):
+        self.model["views"] = [self.component_view()]
+        self.model["elements"][3]["parent"] = "gateway"
+        self.assert_rejected("parent 'gateway' does not match boundary container 'producer'")
+
+    def test_final_c4_view_rejects_open_questions(self):
+        self.model["views"] = [{**self.component_view(), "final": True}]
+        self.model["elements"][3]["status"] = "open_question"
+        self.assert_rejected("zoom: final view contains open_question: review")
+
+    def test_context_counts_projected_system_and_external_nodes(self):
+        self.model["architecture"] = {"view_constraints": {"max_nodes_per_view": 1}}
+        self.model["views"] = [{"id": "context", "kind": "c4_context"}]
+        self.assert_rejected("context: 2 nodes exceeds limit of 1")
+
+    def test_final_context_checks_inferred_external_members(self):
+        self.model["views"] = [{"id": "context", "kind": "c4_context", "final": True}]
+        self.model["elements"][0]["status"] = "open_question"
+        self.assert_rejected("context: final view contains open_question: publisher")
+
 
 if __name__ == "__main__":
     unittest.main()

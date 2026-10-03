@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 import yaml
+from domain_validation import validate_domain
 
 FILE = Path(sys.argv[1] if len(sys.argv) > 1 else "model/architecture.yml")
 errors = []
@@ -55,12 +56,47 @@ for r in relationships:
 for orphan in sorted(known - used):
     errors.append(f"Orphan element: {orphan}")
 
+max_nodes = (doc.get("architecture", {}).get("view_constraints", {})
+             .get("max_nodes_per_view", 15))
+if type(max_nodes) is not int or max_nodes < 1:
+    errors.append("architecture.view_constraints.max_nodes_per_view must be a positive integer")
+    max_nodes = 15
+
 for v in views:
     vid = v.get("id", "<unknown>")
     nodes = v.get("elements", v.get("nodes",
             v.get("include_elements", v.get("include", [])))) or []
-    if len(nodes) > 15:
-        errors.append(f"{vid}: {len(nodes)} nodes exceeds limit of 15")
+    for eid in nodes:
+        if eid not in known:
+            errors.append(f"{vid}: unknown view element: {eid}")
+    # Context projects internal endpoints onto one software system.
+    context = v.get("kind") == "c4_context"
+    if context and "elements" not in v:
+        nodes = [eid for eid in element_ids
+                 if eid in used and elements_by_id[eid].get("kind")
+                 in {"actor", "external_system"}]
+    node_count = len(nodes) + (1 if context else 0)
+    if node_count > max_nodes:
+        errors.append(f"{vid}: {node_count} nodes exceeds limit of {max_nodes}")
+    if v.get("kind") == "c4_component":
+        container = v.get("container")
+        target = v.get("zoom_target")
+        for field, ident in (("container", container), ("zoom_target", target)):
+            if ident not in known or elements_by_id[ident].get("kind") != "container":
+                errors.append(f"{vid}: {field} must reference a valid container: {ident!r}")
+        if container in known and target in known and container != target:
+            errors.append(f"{vid}: container and zoom_target must match")
+        for eid in nodes:
+            elem = elements_by_id.get(eid, {})
+            if elem.get("kind") == "component":
+                parent = elem.get("parent")
+                if not parent:
+                    errors.append(f"{vid}/{eid}: component has no parent")
+                elif parent != container:
+                    errors.append(
+                        f"{vid}/{eid}: parent {parent!r} does not match "
+                        f"boundary container {container!r}"
+                    )
     final = v.get("final") is True or v.get("status") == "final"
     if final:
         for eid in nodes:
@@ -119,9 +155,23 @@ for output in outputs:
             f"to produced_by {producer!r}"
         )
 
+domain_path = Path(sys.argv[2]) if len(sys.argv) > 2 else FILE.with_name("domain.yml")
+domain_checked = False
+if domain_path.exists():
+    domain_checked = True
+    try:
+        domain_errors = validate_domain(yaml.safe_load(domain_path.read_text(encoding="utf-8")), doc)
+        errors.extend(f"domain: {e}" for e in domain_errors)
+    except (OSError, yaml.YAMLError, TypeError, KeyError, AttributeError) as exc:
+        errors.append(f"domain: cannot validate {domain_path}: {exc}")
+elif len(sys.argv) > 2:
+    errors.append(f"domain: model not found: {domain_path}")
+
 if errors:
     print("ARCHITECTURE VALIDATION FAILED")
     print("\n".join(f"- {e}" for e in errors))
     sys.exit(1)
 
 print("ARCHITECTURE VALIDATION PASSED")
+if domain_checked:
+    print("DOMAIN VALIDATION PASSED")
