@@ -1,0 +1,2018 @@
+# SSOT del dominio persistente. DBML/SQL/ER/diccionario se generan; no editar derivados.
+model_version: 1.0.0
+source_authority:
+  scope: SRC_CHARTER
+  architecture:
+  - architecture.yml#architectural_invariants
+  - Accepted ADRs
+  - architecture.yml
+  technology:
+  - SRC_DRIFT
+  - Accepted technology ADRs
+  functionality: docs/research/arquitectura-informacion.md
+  rule: Autoridad por materia; IA no amplía Charter ni contradice ADR/INV.
+schemas:
+- id: ops
+  owner_containers:
+  - pipeline_service
+  description_es: Operación de workflows e incidentes.
+- id: evidence
+  owner_containers:
+  - log_event_service
+  - evidence_correlation_engine
+  description_es: Evidencia normalizada y contexto; ownership por tabla.
+- id: diagnosis
+  owner_containers:
+  - recommendation_service
+  description_es: Diagnósticos, recomendaciones y revisión.
+- id: knowledge
+  owner_containers:
+  - rag_retrieval
+  description_es: Corpus autorizado recuperable.
+- id: audit
+  owner_containers:
+  - shared
+  description_es: Auditoría transversal funcional.
+entities:
+- id: repositories
+  table: repositories
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Repositorio GitHub autorizado; entidad distinta del workflow monitorizado.
+  scope_basis: approved_domain
+  status: confirmed
+  source:
+  - SRC_CHARTER#Alcance-del-Proyecto
+  - architecture.yml#github
+  - DD-001
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: github_repository_id
+    type: text
+    pk: false
+    nullable: false
+    unique: true
+    er_visible: true
+    assumption: A-003
+    description_es: ID externo del repositorio GitHub.
+  - name: full_name
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Nombre owner/repository para presentación.
+  - name: default_branch
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Rama por defecto suministrada por GitHub.
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: false
+  retention_policy: null
+- id: pipelines
+  table: pipelines
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Pipeline equivale directamente a un GitHub Actions workflow monitorizado.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id001
+  - SRC_ADR_018
+  - architecture.yml#pipeline_service
+  - docs/research/arquitectura-informacion.md
+  - DD-001
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: repository_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Repositorio del workflow.
+    fk: ops.repositories.id
+  - name: github_workflow_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-003
+    description_es: ID externo del workflow, único dentro de su repositorio.
+  - name: workflow_name
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Nombre del workflow monitorizado.
+  - name: workflow_file
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Ruta declarada del workflow.
+  - name: environment
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Entorno operacional suministrado por configuración autorizada.
+  - name: criticality
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Criticidad del pipeline; distinta de la severidad del incidente.
+    enum: PipelineCriticality
+    source:
+    - docs/research/arquitectura-informacion.md
+  - name: monitoring_status
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Estado de monitorización.
+    enum: MonitoringStatus
+    source:
+    - docs/research/arquitectura-informacion.md
+  - name: responsible_team_ref
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Referencia externa al equipo responsable; sin tabla teams.
+    source:
+    - docs/research/arquitectura-informacion.md
+  - name: responsible_team_name_snapshot
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Nombre del equipo al registrar configuración.
+    source:
+    - docs/research/arquitectura-informacion.md
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: false
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - repository_id
+    - github_workflow_id
+    name: pipelines_repository_id_github_workflow_id_uq
+- id: pipeline_executions
+  table: pipeline_executions
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Ejecución de un workflow; conserva contexto GitHub Actions y resultado de fallo autorizado.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id002
+  - architecture.yml#pipeline_service
+  - SRC_ADR_010
+  - DD-002
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: pipeline_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Pipeline que fue ejecutado.
+    fk: ops.pipelines.id
+  - name: github_run_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-003
+    description_es: ID externo del run.
+  - name: run_attempt
+    type: integer
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-003
+    description_es: Intento del run; distingue reejecuciones del mismo ID externo.
+  - name: branch
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Rama ejecutada.
+  - name: commit_sha
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Referencia al commit ejecutado.
+  - name: external_status
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Estado del run suministrado por GitHub; no define un enum interno nuevo.
+  - name: external_conclusion
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Conclusión externa cuando está disponible.
+  - name: failed
+    type: boolean
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-004
+    description_es: Indica un fallo identificado por GitHub Actions; no representa detección AIOps.
+  - name: started_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Inicio de ejecución.
+  - name: completed_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Fin de ejecución.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - pipeline_id
+    - github_run_id
+    - run_attempt
+    name: pipeline_executions_pipeline_id_github_run_id_run_attempt_uq
+  checks:
+  - name: pipeline_executions_check_1
+    expression: run_attempt > 0
+- id: execution_stages
+  table: execution_stages
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Etapas de una ejecución; los jobs pueden suministrar evidencia sin tablas adicionales.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id003
+  - architecture.yml#pipeline_service
+  - docs/research/arquitectura-informacion.md
+  - DD-013
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: execution_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Ejecución a la que pertenece la etapa.
+    fk: ops.pipeline_executions.id
+  - name: stage
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Etapa operacional normalizada; no es nivel de log.
+    enum: PipelineStage
+  - name: external_status
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Estado de etapa suministrado por evidencia autorizada.
+  - name: started_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Inicio observado de la etapa.
+  - name: completed_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Fin observado de la etapa.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - execution_id
+    - stage
+    name: execution_stages_execution_id_stage_uq
+- id: incidents
+  table: incidents
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Incidente originado en una ejecución fallida, con asignación y tiempos operacionales.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id004
+  - SRC_ADR_018
+  - architecture.yml#INV-007
+  - docs/research/arquitectura-informacion.md
+  - DD-002
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: pipeline_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Pipeline del incidente; debe coincidir con el de su ORIGIN.
+    fk: ops.pipelines.id
+  - name: status
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Estado operacional del incidente.
+    enum: IncidentStatus
+  - name: severity
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: true
+    assumption: A-005
+    description_es: Severidad operacional; nullable hasta disponer de regla aprobada de derivación.
+    enum: Severity
+  - name: stage
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Etapa del fallo.
+    enum: PipelineStage
+  - name: summary
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Resumen saneado del fallo observado.
+  - name: assignee_ref
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Referencia externa a identidad corporativa Entra ID; distinta de ownership del pipeline.
+  - name: assignee_display_name_snapshot
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Nombre del assignee al asignar; no es maestro de identidad.
+  - name: detected_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de detección del fallo; origen del cálculo TMD.
+  - name: remediation_started_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Start remediation registra estado y tiempo; no ejecuta correcciones.
+  - name: verification_started_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Inicio de verificación bajo control humano.
+  - name: resolved_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Resolución operacional del incidente.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  domain_constraints:
+  - exactly_one_failed_origin
+  - origin_pipeline_consistency
+- id: incident_runs
+  table: incident_runs
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Vincula un incidente con exactamente un ORIGIN fallido y cero o más VERIFICATION.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id005
+  - SRC_ADR_018
+  - model/domain_decisions.md
+  - DD-002
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: incident_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Incidente propietario de la relación.
+    fk: ops.incidents.id
+  - name: execution_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Ejecución ORIGIN o VERIFICATION; no fija política adicional del workflow de verificación.
+    fk: ops.pipeline_executions.id
+  - name: role
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Rol del run en el incidente.
+    enum: IncidentRunRole
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - incident_id
+    - execution_id
+    name: incident_runs_incident_id_execution_id_uq
+  domain_constraints:
+  - at_most_one_origin
+- id: pipeline_access_grants
+  table: pipeline_access_grants
+  schema: ops
+  owner_container: pipeline_service
+  description_es: Representación provisional de capacidades por pipeline; no requisito core ni implementación
+    definitiva RBAC.
+  scope_basis: ia_only
+  status: inferred
+  source: &id006
+  - docs/research/arquitectura-informacion.md
+  - SRC_ADR_003
+  - DD-017
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: pipeline_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Pipeline al que corresponde la capacidad.
+    fk: ops.pipelines.id
+  - name: principal_ref
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Referencia controlada a principal corporativo Entra ID; sin tabla users/roles.
+  - name: capability
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Capacidad funcional propuesta por arquitectura de información.
+    enum: AccessCapability
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - pipeline_id
+    - principal_ref
+    - capability
+    name: pipeline_access_grants_pipeline_id_principal_ref_capability_uq
+- id: evidence_items
+  table: evidence_items
+  schema: evidence
+  owner_container: log_event_service
+  description_es: Metadata y extracto normalizado; logs grandes en Azure Blob Storage por referencia sin
+    SAS ni secretos.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id007
+  - architecture.yml#log_event_service
+  - architecture.yml#object_evidence_store
+  - architecture.yml#INV-001
+  - SRC_ADR_013
+  - DD-006
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: incident_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Incidente asociado por ID lógico.
+    logical_ref: ops.incidents.id
+  - name: execution_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Ejecución observada por ID lógico.
+    logical_ref: ops.pipeline_executions.id
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: source
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Procedencia operacional autorizada, independiente de provenance RAG.
+  - name: stage
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Etapa operacional observada.
+    enum: PipelineStage
+  - name: job
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Job externo cuando existe.
+  - name: summary
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Resumen normalizado y saneado.
+  - name: excerpt
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Extracto minimizado y enmascarado; nunca payload sensible crudo.
+  - name: observed_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante observado en la fuente.
+  - name: sequence
+    type: bigint
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Orden de evidencia cuando la fuente lo proporciona.
+  - name: storage_container
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Nombre de container Blob; sin tokens, credenciales ni URL SAS.
+  - name: blob_object_key
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Clave del objeto Blob; sin SAS ni material secreto.
+  - name: content_hash
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Hash del objeto cuando existe; algoritmo no fijado.
+  - name: size_bytes
+    type: bigint
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Tamaño externo en bytes cuando está disponible.
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+  checks:
+  - name: evidence_items_check_1
+    expression: size_bytes IS NULL OR size_bytes >= 0
+  - name: evidence_items_check_2
+    expression: (storage_container IS NULL) = (blob_object_key IS NULL)
+- id: correlated_contexts
+  table: correlated_contexts
+  schema: evidence
+  owner_container: evidence_correlation_engine
+  description_es: Snapshot saneado del contexto correlacionado; conserva los IDs de evidencia utilizados.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id008
+  - architecture.yml#evidence_correlation_engine
+  - SRC_ADR_015
+  - DD-014
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: incident_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Incidente del contexto.
+    logical_ref: ops.incidents.id
+  - name: execution_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Ejecución correlacionada; no fusionar ejecuciones no relacionadas.
+    logical_ref: ops.pipeline_executions.id
+  - name: evidence_ids
+    type: uuid[]
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-006
+    description_es: Colección de IDs lógicos de evidencia; otro servicio no modifica evidence_items.
+    logical_ref: evidence.evidence_items.id
+  - name: summary
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Síntesis saneada del contexto operacional.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+- id: diagnoses
+  table: diagnoses
+  schema: diagnosis
+  owner_container: recommendation_service
+  description_es: Snapshot diagnóstico versionado append-only; actual = versión mayor por incidente.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id009
+  - architecture.yml#recommendation_service
+  - architecture.yml#INV-005
+  - SRC_ADR_013
+  - DD-003
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: incident_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Incidente por referencia lógica; sin asociación JPA cross-context.
+    logical_ref: ops.incidents.id
+  - name: version
+    type: integer
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Versión positiva, única por incidente; cada nuevo snapshot se inserta.
+  - name: status
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Estado diagnóstico del snapshot.
+    enum: DiagnosisStatus
+  - name: probable_cause
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-007
+    description_es: Hipótesis de causa probable; obligatoria cuando DIAGNOSIS_READY.
+  - name: explanation
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Explicación saneada del diagnóstico.
+  - name: limitations
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Limitaciones de evidencia/inferencia.
+  - name: confidence
+    type: jsonb
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-008
+    description_es: Valor informado por el proveedor, sin imponer tipo numérico, escala ni rango.
+  - name: diagnosis_ready_at
+    type: timestamptz
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de disponibilidad de esta versión; TMD se calcula con detected_at del incidente.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+  unique_constraints:
+  - columns:
+    - incident_id
+    - version
+    name: diagnoses_incident_id_version_uq
+  checks:
+  - name: diagnoses_check_1
+    expression: version > 0
+  - name: diagnoses_check_2
+    expression: status <> 'DIAGNOSIS_READY' OR (probable_cause IS NOT NULL AND btrim(probable_cause) <>
+      '' AND diagnosis_ready_at IS NOT NULL)
+  domain_constraints:
+  - append_only
+- id: recommendations
+  table: recommendations
+  schema: diagnosis
+  owner_container: recommendation_service
+  description_es: Recomendación como entidad propia de una versión diagnóstica; no ejecuta remediación.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id010
+  - architecture.yml#recommendation_service
+  - SRC_ADR_016
+  - SRC_ADR_013
+  - DD-004
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: diagnosis_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Versión que propone la recomendación.
+    fk: diagnosis.diagnoses.id
+  - name: description
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Procedimiento o acción recomendada para evaluación humana.
+  - name: critical
+    type: boolean
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Marcado de recomendación crítica para gobierno humano.
+    source:
+    - architecture.yml#human_review_component
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+- id: diagnosis_evidence_links
+  table: diagnosis_evidence_links
+  schema: diagnosis
+  owner_container: recommendation_service
+  description_es: Traza qué evidencia operacional sustenta una versión diagnóstica.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id011
+  - architecture.yml#diagnostic_output_component
+  - SRC_ADR_013
+  - DD-006
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: diagnosis_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Versión diagnóstica sustentada.
+    fk: diagnosis.diagnoses.id
+  - name: evidence_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Evidencia operacional consultada por ID lógico.
+    logical_ref: evidence.evidence_items.id
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+  unique_constraints:
+  - columns:
+    - diagnosis_id
+    - evidence_id
+    name: diagnosis_evidence_links_diagnosis_id_evidence_id_uq
+- id: diagnosis_source_links
+  table: diagnosis_source_links
+  schema: diagnosis
+  owner_container: recommendation_service
+  description_es: 'Traza consulted_sources: Diagnosis → KnowledgeChunk → KnowledgeDocument.'
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id012
+  - architecture.yml#diagnostic_output_component
+  - architecture.yml#rag_retrieval
+  - SRC_ADR_013
+  - DD-007
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: diagnosis_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Versión diagnóstica que consultó RAG.
+    fk: diagnosis.diagnoses.id
+  - name: knowledge_chunk_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Chunk consultado; documento reconstruible mediante FK de knowledge_chunks.
+    logical_ref: knowledge.knowledge_chunks.id
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+  unique_constraints:
+  - columns:
+    - diagnosis_id
+    - knowledge_chunk_id
+    name: diagnosis_source_links_diagnosis_id_knowledge_chunk_id_uq
+- id: human_reviews
+  table: human_reviews
+  schema: diagnosis
+  owner_container: recommendation_service
+  description_es: 'Revisión humana: ausencia = PENDING derivado; decision solo CONFIRMED, CORRECTED o
+    REJECTED.'
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id013
+  - SRC_ADR_011
+  - SRC_ADR_016
+  - architecture.yml#INV-006
+  - SRC_ADR_013
+  - DD-005
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: diagnostic_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Versión revisada; conserva el nombre contractual diagnostic_id de ADR-011.
+    fk: diagnosis.diagnoses.id
+  - name: reviewer_ref
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Identidad externa del revisor corporativo; mapea reviewer del contrato.
+  - name: decision
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: CONFIRMED acepta; CORRECTED aporta causa corregida; REJECTED rechaza sin alternativa
+      validada.
+    enum: HumanReviewDecision
+  - name: timestamp
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de revisión del contrato.
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: actual_cause
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Causa corregida suministrada por el revisor; requerida semánticamente en CORRECTED.
+  - name: comment
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Comentario saneado del revisor.
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: RET-001
+  checks:
+  - name: human_reviews_check_1
+    expression: decision <> 'CORRECTED' OR (actual_cause IS NOT NULL AND btrim(actual_cause) <> '')
+- id: knowledge_documents
+  table: knowledge_documents
+  schema: knowledge
+  owner_container: rag_retrieval
+  description_es: Corpus autorizado; prohíbe casos de evaluación y soluciones de referencia conforme a
+    INV-010.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id014
+  - architecture.yml#rag_retrieval
+  - architecture.yml#INV-010
+  - SRC_ADR_007
+  - DD-007
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: corpus_kind
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Clase de corpus autorizado.
+    enum: KnowledgeCorpusKind
+  - name: title
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Título de la fuente autorizada.
+  - name: provenance
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Referencia obligatoria de origen autorizado; nunca URL con tokens o secretos.
+  - name: reviewed_incident_id
+    type: uuid
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Incidente revisado cuando el corpus es reviewed_incidents; elegibilidad RAG requiere
+      separación evaluación.
+    logical_ref: ops.incidents.id
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  checks:
+  - name: knowledge_documents_check_1
+    expression: btrim(provenance) <> ''
+  - name: knowledge_documents_check_2
+    expression: corpus_kind <> 'reviewed_incidents' OR reviewed_incident_id IS NOT NULL
+- id: knowledge_chunks
+  table: knowledge_chunks
+  schema: knowledge
+  owner_container: rag_retrieval
+  description_es: Chunks recuperables de documentos autorizados; conserva provenance y pgvector sin dimensión
+    fija.
+  scope_basis: approved_domain
+  status: confirmed
+  source: &id015
+  - SRC_ADR_007
+  - architecture.yml#INV-010
+  - DD-009
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: document_id
+    type: uuid
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Documento de procedencia; permite reconstruir fuentes.
+    fk: knowledge.knowledge_documents.id
+  - name: chunk_index
+    type: integer
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-009
+    description_es: Posición del chunk dentro del documento.
+  - name: content
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Fragmento autorizado y saneado; nunca casos/soluciones de evaluación.
+  - name: provenance
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Procedencia obligatoria del fragmento dentro de su documento.
+  - name: embedding
+    type: vector
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Embedding pgvector; dimensión abierta, sin vector(n).
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+  unique_constraints:
+  - columns:
+    - document_id
+    - chunk_index
+    name: knowledge_chunks_document_id_chunk_index_uq
+  checks:
+  - name: knowledge_chunks_check_1
+    expression: chunk_index >= 0
+  - name: knowledge_chunks_check_2
+    expression: btrim(provenance) <> ''
+- id: audit_events
+  table: audit_events
+  schema: audit
+  owner_container: shared
+  description_es: Auditoría funcional transversal; before/after contienen solo metadata sanitizada, jamás
+    logs crudos, secretos, tokens o credenciales.
+  scope_basis: approved_domain
+  status: confirmed
+  source:
+  - SRC_ADR_011
+  - architecture.yml#audit_trail
+  - architecture.yml#CTRL-002
+  - DD-016
+  attributes:
+  - name: id
+    type: uuid
+    pk: true
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: A-001
+    description_es: Identificador estable asignado por el servicio propietario.
+  - name: category
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Categoría funcional declarada en architecture.yml.
+    enum: AuditCategory
+  - name: correlation_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Identificador de correlación end-to-end; no contiene información sensible.
+    source:
+    - architecture.yml#CTRL-003
+  - name: actor_ref
+    type: text
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Identidad externa del actor cuando está disponible.
+  - name: entity_type
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: Tipo de objeto auditado; referencia polimórfica lógica.
+  - name: entity_id
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: true
+    assumption: null
+    description_es: ID lógico del objeto auditado; sin FK polimórfica.
+  - name: action
+    type: text
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Acción funcional observada.
+  - name: before_state
+    type: jsonb
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Solo metadata sanitizada previa; prohíbe raw logs/payload sensible no enmascarado.
+  - name: after_state
+    type: jsonb
+    pk: false
+    nullable: true
+    unique: false
+    er_visible: false
+    assumption: null
+    description_es: Solo metadata sanitizada posterior; prohíbe secrets, tokens y credentials.
+  - name: occurred_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de ocurrencia del evento funcional.
+  - name: created_at
+    type: timestamptz
+    pk: false
+    nullable: false
+    unique: false
+    er_visible: false
+    assumption: A-002
+    description_es: Instante de persistencia; permite aplicar retención cuando corresponde.
+    source:
+    - SRC_ADR_013
+    - DD-015
+  traceability_required: true
+  retention_policy: null
+relationships:
+- id: pipelines_repository_id
+  from: ops.pipelines.repository_id
+  to: ops.repositories.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id001
+- id: pipeline_executions_pipeline_id
+  from: ops.pipeline_executions.pipeline_id
+  to: ops.pipelines.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id002
+- id: execution_stages_execution_id
+  from: ops.execution_stages.execution_id
+  to: ops.pipeline_executions.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id003
+- id: incidents_pipeline_id
+  from: ops.incidents.pipeline_id
+  to: ops.pipelines.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id004
+- id: incident_runs_incident_id
+  from: ops.incident_runs.incident_id
+  to: ops.incidents.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id005
+- id: incident_runs_execution_id
+  from: ops.incident_runs.execution_id
+  to: ops.pipeline_executions.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id005
+- id: pipeline_access_grants_pipeline_id
+  from: ops.pipeline_access_grants.pipeline_id
+  to: ops.pipelines.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id006
+- id: evidence_items_incident_id
+  from: evidence.evidence_items.incident_id
+  to: ops.incidents.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id007
+- id: evidence_items_execution_id
+  from: evidence.evidence_items.execution_id
+  to: ops.pipeline_executions.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id007
+- id: correlated_contexts_incident_id
+  from: evidence.correlated_contexts.incident_id
+  to: ops.incidents.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id008
+- id: correlated_contexts_execution_id
+  from: evidence.correlated_contexts.execution_id
+  to: ops.pipeline_executions.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id008
+- id: correlated_contexts_evidence_ids
+  from: evidence.correlated_contexts.evidence_ids
+  to: evidence.evidence_items.id
+  kind: logical_ref
+  cardinality: many_to_many
+  source: *id008
+- id: diagnoses_incident_id
+  from: diagnosis.diagnoses.incident_id
+  to: ops.incidents.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id009
+- id: recommendations_diagnosis_id
+  from: diagnosis.recommendations.diagnosis_id
+  to: diagnosis.diagnoses.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id010
+- id: diagnosis_evidence_links_diagnosis_id
+  from: diagnosis.diagnosis_evidence_links.diagnosis_id
+  to: diagnosis.diagnoses.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id011
+- id: diagnosis_evidence_links_evidence_id
+  from: diagnosis.diagnosis_evidence_links.evidence_id
+  to: evidence.evidence_items.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id011
+- id: diagnosis_source_links_diagnosis_id
+  from: diagnosis.diagnosis_source_links.diagnosis_id
+  to: diagnosis.diagnoses.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id012
+- id: diagnosis_source_links_knowledge_chunk_id
+  from: diagnosis.diagnosis_source_links.knowledge_chunk_id
+  to: knowledge.knowledge_chunks.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id012
+- id: human_reviews_diagnostic_id
+  from: diagnosis.human_reviews.diagnostic_id
+  to: diagnosis.diagnoses.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id013
+- id: knowledge_documents_reviewed_incident_id
+  from: knowledge.knowledge_documents.reviewed_incident_id
+  to: ops.incidents.id
+  kind: logical_ref
+  cardinality: many_to_one
+  source: *id014
+- id: knowledge_chunks_document_id
+  from: knowledge.knowledge_chunks.document_id
+  to: knowledge.knowledge_documents.id
+  kind: fk
+  cardinality: many_to_one
+  source: *id015
+enums:
+- id: IncidentStatus
+  schema: ops
+  values:
+  - OPEN
+  - IN_REMEDIATION
+  - VERIFICATION
+  - RESOLVED
+  status: confirmed
+  source: &id016
+  - SRC_ADR_018
+  - model/domain_decisions.md
+- id: DiagnosisStatus
+  schema: diagnosis
+  values:
+  - ANALYZING
+  - DIAGNOSIS_READY
+  - INCONCLUSIVE
+  status: confirmed
+  source: *id016
+- id: HumanReviewDecision
+  schema: diagnosis
+  values:
+  - CONFIRMED
+  - CORRECTED
+  - REJECTED
+  status: confirmed
+  source: *id016
+- id: IncidentRunRole
+  schema: ops
+  values:
+  - ORIGIN
+  - VERIFICATION
+  status: confirmed
+  source: *id016
+- id: PipelineStage
+  schema: ops
+  values:
+  - BUILD
+  - TESTING
+  - QUALITY_GATE
+  - DEPLOYMENT
+  - CONTAINER
+  - INFRASTRUCTURE
+  status: confirmed
+  source: *id016
+- id: MonitoringStatus
+  schema: ops
+  values:
+  - ACTIVE
+  - PAUSED
+  status: confirmed
+  source: *id016
+- id: AccessCapability
+  schema: ops
+  values:
+  - VIEW
+  - OPERATE
+  - CONFIGURE
+  status: confirmed
+  source: *id016
+- id: Severity
+  schema: ops
+  values:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+  - LOW
+  status: confirmed
+  source: *id016
+- id: PipelineCriticality
+  schema: ops
+  values:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+  - LOW
+  status: confirmed
+  source: *id016
+- id: KnowledgeCorpusKind
+  schema: knowledge
+  values:
+  - reviewed_incidents
+  - authorized_technical_documentation
+  - authorized_response_procedures
+  status: confirmed
+  source:
+  - architecture.yml#rag_retrieval
+- id: AuditCategory
+  schema: audit
+  values:
+  - diagnostic_generation
+  - evidence_usage
+  - human_review
+  - access_and_governance_events
+  status: confirmed
+  source:
+  - architecture.yml#audit_trail
+retention:
+  id: RET-001
+  duration_days: 365
+  source:
+  - SRC_ADR_013
+  - architecture.yml#INV-009
+  scope:
+  - logs
+  - diagnoses
+  - evidence
+  rule: Aplicar a tablas marcadas retention_policy; configuración, corpus y auditoría no reciben plazo
+    adicional inferido. Sin purge jobs.
+assumptions:
+- id: A-001
+  status: assumption
+  description_es: UUID asignados por cada servicio; no default ni extensión generadora de UUID.
+  source:
+  - model/domain_decisions.md
+- id: A-002
+  status: assumption
+  description_es: Tiempos en timestamptz; created_at asignado por el owner. diagnosis_ready_at pertenece
+    a cada versión; no se duplica en ops.incidents ni se almacena TMD.
+  source:
+  - model/domain_decisions.md
+- id: A-003
+  status: assumption
+  description_es: IDs externos GitHub como text, run_attempt positivo; claves únicas por repositorio/workflow
+    y pipeline/run/attempt.
+  source:
+  - model/domain_decisions.md
+- id: A-004
+  status: assumption
+  description_es: failed representa el fallo ya identificado por GitHub Actions; no fija un algoritmo
+    nuevo de detección ni una taxonomía interna de resultados.
+  source:
+  - model/domain_decisions.md
+- id: A-005
+  status: assumption
+  description_es: Severity nullable mientras no exista regla aprobada de derivación; no derivar de criticality
+    ni de log level.
+  source:
+  - model/domain_decisions.md
+- id: A-006
+  status: assumption
+  description_es: correlated_contexts conserva evidence_ids UUID[] como referencias lógicas al owner log_event_service;
+    validación y saneamiento en aplicación, sin tabla de asociación adicional.
+  source:
+  - model/domain_decisions.md
+- id: A-007
+  status: assumption
+  description_es: probable_cause nullable para snapshots ANALYZING/INCONCLUSIVE; DIAGNOSIS_READY exige
+    causa probable y diagnosis_ready_at. Cambiar estado añade una versión inmutable.
+  source:
+  - model/domain_decisions.md
+- id: A-008
+  status: assumption
+  description_es: confidence JSONB nullable conserva el valor recibido sin fijar escala, unidad ni representación
+    numérica obligatoria.
+  source:
+  - model/domain_decisions.md
+- id: A-009
+  status: assumption
+  description_es: chunk_index empieza en cero y es único por documento; embedding nullable durante carga,
+    sin resolver mecanismo de actualización.
+  source:
+  - model/domain_decisions.md
+- id: A-010
+  status: assumption
+  description_es: El corpus elegible y las referencias lógicas son verificados por los owners en aplicación;
+    constraints estructurales no pueden detectar texto de evaluación ni datos sensibles dentro de texto/JSON.
+  source:
+  - model/domain_decisions.md
+- id: A-011
+  status: assumption
+  description_es: No hay originales Charter/TI/drift en el checkout; las referencias a alcance provienen
+    del modelo canónico vigente y del prompt aprobado, sin atribuir nuevos requisitos literales al Charter.
+  source:
+  - model/domain_decisions.md
+- id: A-012
+  status: assumption
+  description_es: 'Sin cardinalidad final adicional para revisiones: se admite historial de human_reviews
+    por versión; la ausencia implica PENDING y no se agrega enum persistido de validación.'
+  source:
+  - model/domain_decisions.md
+open_questions:
+- id: DQ-001
+  topic: incident_severity_derivation
+  status: open_question
+  description_es: Regla concreta de derivación de severidad del incidente.
+- id: DQ-002
+  topic: confidence_semantics
+  status: open_question
+  description_es: Escala y semántica exacta de confidence.
+- id: DQ-003
+  topic: embedding_dimension
+  status: open_question
+  description_es: Dimensión del embedding; el modelo concreto sigue sin fijarse.
+  embedding_dimension: null
+- id: DQ-004
+  topic: rag_corpus_updates
+  status: open_question
+  description_es: Mecanismo definitivo de carga y actualización del corpus RAG.
+- id: DQ-005
+  topic: pipeline_rbac
+  status: open_question
+  description_es: Implementación final de RBAC granular por pipeline.
+- id: DQ-006
+  topic: monitored_workflow_registration
+  status: open_question
+  description_es: Política funcional final para alta de workflows monitorizados.

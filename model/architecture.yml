@@ -1,8 +1,8 @@
 architecture:
   id: ey_aiops_ci_cd_diagnosis
   name: Prototipo AIOps para diagnóstico de fallos CI/CD
-  model_version: "0.3.0-physical-views"
-  phase: "phase_3_physical_views"
+  model_version: "0.4.0-c4-views"
+  phase: "phase_4_c4_views"
   status: draft
   renderable: true
 
@@ -104,6 +104,14 @@ sources:
 
   - id: SRC_ADR_016
     file: docs/architecture/decisions/ADR-016-identity-api-human-review-and-artifact-flow.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_017
+    file: docs/architecture/decisions/ADR-017-diagnostic-service-component-boundaries.md
+    role: approved_architectural_decision
+
+  - id: SRC_ADR_018
+    file: docs/architecture/decisions/ADR-018-application-architecture-ddd-cqrs.md
     role: approved_architectural_decision
 
 layers:
@@ -310,6 +318,9 @@ elements:
 
   - id: ingestion_normalization_service
     name: Servicio de Ingesta y Normalización
+    backend:
+      language: Java
+      framework: Spring Boot
     kind: container
     layer: L3
     capabilities:
@@ -342,6 +353,7 @@ elements:
       concrete_service: Azure Container Apps
     status: confirmed
     source:
+      - SRC_ADR_018
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A5:K17"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A6:I33"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B21:C26"
@@ -355,6 +367,9 @@ elements:
     technology:
       decision_status: closed
       name: Azure Service Bus
+    host:
+      environment: microsoft_azure
+      concrete_service: Azure Service Bus
     topology:
       decision_status: closed
       kind: topic_with_subscriptions
@@ -370,6 +385,9 @@ elements:
 
   - id: nlp_log_processor
     name: Procesamiento NLP de Logs
+    backend:
+      language: Python
+      framework: FastAPI
     kind: container
     layer: L5
     capabilities:
@@ -387,6 +405,7 @@ elements:
       purpose: semantic_retrieval_for_rag
     status: confirmed
     source:
+    - SRC_ADR_018
     - SRC_DRIFT#Procesamiento-inicial-de-logs
     - SRC_DRIFT#Procesamiento-NLP
     - SRC_ADR_007
@@ -398,6 +417,9 @@ elements:
 
   - id: pipeline_service
     name: Pipeline Service
+    backend:
+      language: Java
+      framework: Spring Boot
     kind: container
     layer: L5
     responsibilities:
@@ -417,12 +439,16 @@ elements:
       concrete_service: Azure Container Apps
     status: confirmed
     source:
+      - SRC_ADR_018
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A19:K19"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A34:I35"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
 
   - id: log_event_service
     name: Log/Event Service
+    backend:
+      language: Java
+      framework: Spring Boot
     kind: container
     layer: L5
     responsibilities:
@@ -438,12 +464,16 @@ elements:
       concrete_service: Azure Container Apps
     status: confirmed
     source:
+      - SRC_ADR_018
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A20:K20"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A36:I37"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
 
   - id: evidence_correlation_engine
     name: Servicio de Correlación de Evidencias
+    backend:
+      language: Java
+      framework: Spring Boot
     kind: container
     layer: L5
     correlation_dimensions:
@@ -467,6 +497,7 @@ elements:
       concrete_service: Azure Container Apps
     status: confirmed
     source:
+      - SRC_ADR_018
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A25:K25"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A46:I47"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B32:C32"
@@ -474,6 +505,9 @@ elements:
 
   - id: recommendation_service
     name: Diagnostic & Recommendation Service
+    backend:
+      language: Java
+      framework: Spring Boot
     kind: container
     layer: L6
     responsibilities:
@@ -501,6 +535,7 @@ elements:
       concrete_service: Azure Container Apps
     status: confirmed
     source:
+    - SRC_ADR_018
     - TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A31:K31
     - TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A58:I59
     - TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B37:C37
@@ -526,8 +561,55 @@ elements:
     - SRC_ADR_011
     - SRC_ADR_016
 
+  - id: diagnostic_api_component
+    name: Diagnostic API
+    kind: component
+    layer: L6
+    parent: recommendation_service
+    responsibilities:
+      - receive_diagnostic_queries
+      - expose_diagnostic_output
+      - receive_human_review_operations
+    status: confirmed
+    source:
+      - SRC_ADR_017
+
+  - id: diagnostic_orchestrator_component
+    name: Diagnostic Orchestrator
+    kind: component
+    layer: L6
+    parent: recommendation_service
+    responsibilities:
+      - coordinate_correlated_context
+      - request_rag_context
+      - request_llm_inference
+    status: confirmed
+    source:
+      - SRC_ADR_015
+      - SRC_ADR_017
+
+  - id: diagnostic_output_component
+    name: Diagnostic Output Composer
+    kind: component
+    layer: L6
+    parent: recommendation_service
+    responsibilities:
+      - compose_probable_cause
+      - associate_supporting_evidence
+      - associate_consulted_sources
+      - compose_recommendations
+      - expose_limitations
+      - expose_confidence
+    status: confirmed
+    source:
+      - SRC_ADR_009
+      - SRC_ADR_017
+
   - id: rag_retrieval
     name: Recuperación de Conocimiento RAG
+    backend:
+      language: Python
+      framework: FastAPI
     kind: container
     layer: L6
     knowledge_scope:
@@ -541,6 +623,7 @@ elements:
       vector_store: pgvector_knowledge_store
     status: confirmed
     source:
+    - SRC_ADR_018
     - SRC_CHARTER#Marco-Teorico-RAG
     - SRC_DRIFT#Base-de-conocimiento-RAG
     - SRC_ADR_007
@@ -651,6 +734,9 @@ elements:
 
   - id: web_dashboard
     name: Dashboard Web AIOps
+    frontend:
+      language: TypeScript
+      framework: React
     kind: container
     layer: L1
     capabilities:
@@ -681,6 +767,7 @@ elements:
       concrete_service: Azure Static Web Apps
     status: confirmed
     source:
+      - SRC_ADR_018
       - "TP202620027 - Product Backlog v.1.0.xlsx#Backlog_Detallado!A35:K37"
       - "TP202620027 - Historias de Usuario v.1.0.xlsx#HIstoria de Usuario!A66:I71"
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B38:C38"
@@ -999,6 +1086,100 @@ relationships:
     source:
     - SRC_ADR_009
     - SRC_ADR_016
+
+  # Internal projections for C4 Level 3; container relationships remain canonical.
+  - id: rel_apim_diagnostic_api
+    from: api_management
+    to: diagnostic_api_component
+    label: Enruta consultas y operaciones de diagnóstico y revisión
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    derived_from: rel_apim_recommendation_service
+    source:
+      - SRC_ADR_016
+      - SRC_ADR_017
+
+  - id: rel_correlation_diagnostic_api
+    from: evidence_correlation_engine
+    to: diagnostic_api_component
+    label: Entrega contexto correlacionado para diagnóstico
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    derived_from: rel_correlation_recommendation
+    source:
+      - SRC_ADR_015
+      - SRC_ADR_017
+
+  - id: rel_diagnostic_api_orchestrator
+    from: diagnostic_api_component
+    to: diagnostic_orchestrator_component
+    label: Delega la generación del diagnóstico
+    protocol: in-process
+    style: sync
+    status: confirmed
+    source:
+      - SRC_ADR_017
+
+  - id: rel_orchestrator_rag
+    from: diagnostic_orchestrator_component
+    to: rag_retrieval
+    label: Solicita conocimiento contextual autorizado
+    protocol: REST/HTTPS
+    style: sync
+    status: confirmed
+    derived_from: rel_recommendation_rag
+    source:
+      - SRC_ADR_015
+      - SRC_ADR_017
+
+  - id: rel_orchestrator_llm
+    from: diagnostic_orchestrator_component
+    to: pretrained_llm_diagnostic_service
+    label: Solicita inferencia diagnóstica con contexto RAG
+    protocol: Azure OpenAI API/HTTPS
+    style: sync
+    status: confirmed
+    derived_from: rel_recommendation_llm
+    source:
+      - SRC_ADR_004
+      - SRC_ADR_015
+      - SRC_ADR_017
+
+  - id: rel_orchestrator_output
+    from: diagnostic_orchestrator_component
+    to: diagnostic_output_component
+    label: Entrega resultado de inferencia y evidencia contextual
+    protocol: in-process
+    style: sync
+    status: confirmed
+    source:
+      - SRC_ADR_017
+
+  - id: rel_output_postgresql
+    from: diagnostic_output_component
+    to: postgresql_operational_store
+    label: Persiste diagnóstico, recomendaciones y vínculos con evidencia
+    protocol: PostgreSQL
+    style: sync
+    status: confirmed
+    derived_from: rel_recommendation_service_postgresql
+    source:
+      - SRC_ADR_017
+
+  - id: rel_diagnostic_api_human_review
+    from: diagnostic_api_component
+    to: human_review_component
+    label: Delega registro y validación humana del diagnóstico
+    protocol: in-process
+    style: sync
+    status: confirmed
+    derived_from: rel_recommendation_human_review
+    source:
+      - SRC_ADR_011
+      - SRC_ADR_016
+      - SRC_ADR_017
 
 outputs:
   - id: diagnostic_hypothesis
@@ -1374,6 +1555,76 @@ conflicts:
   unresolved: []
 
 views:
+
+  - id: c4_context
+    kind: c4_context
+    title: "C4 Level 1 — Contexto del Sistema"
+    zoom_target: ey_aiops_ci_cd_diagnosis
+    status: draft
+    final: false
+
+  - id: c4_container_processing
+    kind: c4_container
+    title: "C4 Level 2A — Ingesta y Procesamiento AIOps"
+    zoom_from: c4_context
+    zoom_target: ey_aiops_ci_cd_diagnosis
+    status: draft
+    final: false
+    include_external: true
+    elements:
+      - github_actions
+      - observability_sources
+      - ingestion_normalization_service
+      - azure_service_bus
+      - pipeline_service
+      - log_event_service
+      - nlp_log_processor
+      - evidence_correlation_engine
+      - recommendation_service
+      - rag_retrieval
+      - postgresql_operational_store
+      - pgvector_knowledge_store
+      - object_evidence_store
+      - pretrained_llm_diagnostic_service
+
+  - id: c4_container_consumption
+    kind: c4_container
+    title: "C4 Level 2B — Consumo, Gobierno y Persistencia"
+    zoom_from: c4_context
+    zoom_target: ey_aiops_ci_cd_diagnosis
+    status: draft
+    final: false
+    include_external: true
+    elements:
+      - technical_users
+      - entra_id
+      - web_dashboard
+      - api_management
+      - pipeline_service
+      - log_event_service
+      - recommendation_service
+      - postgresql_operational_store
+      - object_evidence_store
+      - github_actions
+
+  - id: c4_component_diagnostic
+    kind: c4_component
+    title: "C4 Level 3 — Componentes del Diagnóstico"
+    zoom_from: c4_container_processing
+    zoom_target: recommendation_service
+    container: recommendation_service
+    status: draft
+    final: false
+    elements:
+      - diagnostic_api_component
+      - diagnostic_orchestrator_component
+      - diagnostic_output_component
+      - human_review_component
+      - evidence_correlation_engine
+      - rag_retrieval
+      - pretrained_llm_diagnostic_service
+      - postgresql_operational_store
+      - api_management
 
   # ----------------------------------------------------------
   # PHYSICAL 01

@@ -1,0 +1,653 @@
+# SSOT exclusivo del diseño de clases; no describe código implementado.
+model_version: 1.0.0
+design_rules:
+  container: recommendation_service
+  language: Java
+  framework: Spring Boot
+  max_nodes_per_diagram: 15
+  cqrs: logical
+  persistence: postgresql_operational_store
+  event_sourcing: false
+  separate_read_write_databases: false
+  autonomous_remediation: false
+  github_access: read_only
+  artifact_publisher: github_actions
+  navigation_views: [c4_context, c4_container_processing, c4_component_diagnostic]
+  source: [model/architecture.yml, model/domain.yml, SRC_ADR_018]
+
+# Las clases compartidas se definen una sola vez. elements es la membresía exacta.
+class_diagrams:
+  - id: CD-1
+    title: CD-1 — Diagnostic API y CQRS
+    zoom_target: diagnostic_api_component
+    elements:
+      - DiagnosisCommandController
+      - DiagnosisQueryController
+      - GenerateDiagnosisCommand
+      - GenerateDiagnosisCommandService
+      - GenerateDiagnosisCommandServiceImpl
+      - GetDiagnosisQuery
+      - DiagnosisQueryService
+      - DiagnosisQueryServiceImpl
+      - DiagnosticView
+      - DiagnosticOrchestrator
+      - DiagnosisRepository
+      - HumanReviewCommandController
+      - HumanReviewQueryController
+      - HumanReviewCommandService
+      - HumanReviewQueryService
+    notes:
+      - Commands devuelven identificadores; queries componen proyecciones sin escritura.
+      - Contexto correlacionado recibido por REST/HTTPS; URI no especificada por la arquitectura.
+      - Operaciones de revisión y consulta ya derivadas de IA/ADR; sin endpoints adicionales.
+      - Orquestador y repositorio se detallan en CD-2; revisión humana se detalla en CD-3.
+  - id: CD-2
+    title: CD-2 — Orquestación de Diagnóstico, RAG y LLM
+    zoom_target: diagnostic_orchestrator_component
+    elements:
+      - DiagnosticOrchestrator
+      - KnowledgeRetrievalPort
+      - RagRetrievalHttpAdapter
+      - DiagnosticLlmGateway
+      - AzureOpenAiDiagnosticAdapter
+      - LlmResponseTranslator
+      - SanitizedDiagnosticContext
+      - DiagnosticOutputComposer
+      - Diagnosis
+      - Recommendation
+      - ProbableCause
+      - DiagnosisRepository
+      - JpaDiagnosisRepositoryAdapter
+      - RagRetrievalExternal
+      - AzureOpenAiExternal
+    notes:
+      - DiagnosticOutputComposer realiza diagnostic_output_component dentro de esta figura.
+      - Solo evidencia saneada, contexto autorizado y conocimiento RAG alcanzan el gateway.
+      - Cada snapshot diagnóstico es inmutable; DIAGNOSIS_READY exige causa probable y fecha.
+      - Recomendaciones y vínculos se insertan con el snapshot; IDs lógicos entre contextos.
+  - id: CD-3
+    title: CD-3 — Human Review y Gobierno Diagnóstico
+    zoom_target: human_review_component
+    elements:
+      - HumanReviewCommandController
+      - HumanReviewQueryController
+      - RecordHumanReviewCommand
+      - HumanReviewCommandService
+      - HumanReviewCommandServiceImpl
+      - HumanReviewQueryService
+      - HumanReviewQueryServiceImpl
+      - HumanReview
+      - HumanReviewDecision
+      - RiskClassificationService
+      - HumanReviewRepository
+      - JpaHumanReviewRepositoryAdapter
+      - AuditTrailPort
+      - PostgresAuditTrailAdapter
+    notes:
+      - CONFIRMED valida; CORRECTED exige actualCause; REJECTED rechaza sin alternativa validada.
+      - PENDING se deriva por ausencia de revisión; no se persiste en HumanReview.
+      - Clasificación de riesgo y marcado crítico requieren política aprobada; sin umbrales inventados.
+      - Auditoría transversal hacia audit.audit_events con metadata saneada e IDs de correlación.
+
+classes:
+  - id: DiagnosisCommandController
+    name: DiagnosisCommandController
+    package: interfaces.rest
+    layer: interfaces
+    stereotype: Controller
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: receiveCorrelatedContext, parameters: [], returns: UUID, effect: write}
+    ingress:
+      architecture_relationship: rel_correlation_diagnostic_api
+      protocol: REST/HTTPS
+  - id: DiagnosisQueryController
+    name: DiagnosisQueryController
+    package: interfaces.rest
+    layer: interfaces
+    stereotype: Controller
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: getDiagnosticOutput, parameters: [], returns: DiagnosticView, effect: read}
+    ingress:
+      architecture_relationship: rel_apim_diagnostic_api
+      protocol: REST/HTTPS
+  - id: GenerateDiagnosisCommand
+    name: GenerateDiagnosisCommand
+    package: domain.model.commands
+    layer: domain
+    stereotype: Command
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes:
+      - {name: incidentId, type: UUID}
+      - {name: executionId, type: UUID}
+      - {name: evidenceIds, type: 'List<UUID>'}
+      - {name: summary, type: String}
+      - {name: correlationId, type: String}
+      - {name: sanitizedPrioritizedEvidence, type: 'List<String>'}
+    methods: []
+  - id: GenerateDiagnosisCommandService
+    name: GenerateDiagnosisCommandService
+    package: application.internal.commandservices
+    layer: application
+    stereotype: CommandService
+    kind: interface
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: command, type: GenerateDiagnosisCommand}], returns: UUID, effect: write}
+  - id: GenerateDiagnosisCommandServiceImpl
+    name: GenerateDiagnosisCommandServiceImpl
+    package: application.internal.commandservices
+    layer: application
+    stereotype: CommandService
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: command, type: GenerateDiagnosisCommand}], returns: UUID, effect: write}
+  - id: GetDiagnosisQuery
+    name: GetDiagnosisQuery
+    package: domain.model.queries
+    layer: domain
+    stereotype: Query
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes:
+      - {name: incidentId, type: UUID}
+    methods: []
+  - id: DiagnosisQueryService
+    name: DiagnosisQueryService
+    package: application.internal.queryservices
+    layer: application
+    stereotype: QueryService
+    kind: interface
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: query, type: GetDiagnosisQuery}], returns: DiagnosticView, effect: read}
+  - id: DiagnosisQueryServiceImpl
+    name: DiagnosisQueryServiceImpl
+    package: application.internal.queryservices
+    layer: application
+    stereotype: QueryService
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: query, type: GetDiagnosisQuery}], returns: DiagnosticView, effect: read}
+  - id: DiagnosticView
+    name: DiagnosticView
+    package: application.internal.queryservices
+    layer: application
+    stereotype: ValueObject
+    role: read_model
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes:
+      - {name: incidentId, type: UUID}
+      - {name: executionContext, type: 'Map<String, Object>'}
+      - {name: failureSummary, type: String}
+      - {name: probableCause, type: String}
+      - {name: supportingEvidence, type: 'List<UUID>'}
+      - {name: consultedSources, type: 'List<UUID>'}
+      - {name: recommendations, type: 'List<Recommendation>'}
+      - {name: limitations, type: String}
+      - {name: confidence, type: Object}
+    methods: []
+    notes: [read model diagnostic_output; proyección en aplicación]
+
+  - id: DiagnosticOrchestrator
+    name: DiagnosticOrchestrator
+    package: application.internal.commandservices
+    layer: application
+    stereotype: CommandService
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: diagnose, parameters: [{name: command, type: GenerateDiagnosisCommand}], returns: UUID, effect: write}
+  - id: KnowledgeRetrievalPort
+    name: KnowledgeRetrievalPort
+    package: application.internal.outboundservices
+    layer: application
+    stereotype: Port
+    kind: interface
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: retrieveAuthorizedKnowledge, parameters: [{name: context, type: SanitizedDiagnosticContext}], returns: 'List<Map<String, Object>>', effect: read}
+  - id: RagRetrievalHttpAdapter
+    name: RagRetrievalHttpAdapter
+    package: infrastructure.clients
+    layer: infrastructure
+    stereotype: Adapter
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: retrieveAuthorizedKnowledge, parameters: [{name: context, type: SanitizedDiagnosticContext}], returns: 'List<Map<String, Object>>', effect: read}
+  - id: DiagnosticLlmGateway
+    name: DiagnosticLlmGateway
+    package: application.internal.outboundservices
+    layer: application
+    stereotype: Port
+    kind: interface
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: infer, parameters: [{name: context, type: SanitizedDiagnosticContext}], returns: Diagnosis, effect: read}
+  - id: AzureOpenAiDiagnosticAdapter
+    name: AzureOpenAiDiagnosticAdapter
+    package: infrastructure.clients
+    layer: infrastructure
+    stereotype: Adapter
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: infer, parameters: [{name: context, type: SanitizedDiagnosticContext}], returns: Diagnosis, effect: read}
+  - id: LlmResponseTranslator
+    name: LlmResponseTranslator
+    package: infrastructure.acl
+    layer: infrastructure
+    stereotype: Translator
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes: []
+    methods:
+      - {name: toDiagnosis, parameters: [{name: azureResponse, type: String}], returns: Diagnosis, effect: pure}
+    notes: [ACL; respuesta Azure convertida a tipos internos]
+  - id: SanitizedDiagnosticContext
+    name: SanitizedDiagnosticContext
+    package: domain.model.valueobjects
+    layer: domain
+    stereotype: ValueObject
+    status: proposed
+    component_realized: diagnostic_orchestrator_component
+    attributes:
+      - {name: sanitizedPrioritizedEvidence, type: 'List<String>', contract_field: sanitized_prioritized_evidence}
+      - {name: correlatedContext, type: 'Map<String, Object>', contract_field: correlated_context}
+      - {name: ragRetrievedKnowledge, type: 'List<Map<String, Object>>', contract_field: rag_retrieved_knowledge}
+    methods: []
+    notes: [Evidencia saneada + contexto autorizado + RAG con provenance]
+  - id: DiagnosticOutputComposer
+    name: DiagnosticOutputComposer
+    package: domain.services
+    layer: domain
+    stereotype: DomainService
+    status: proposed
+    component_realized: diagnostic_output_component
+    attributes: []
+    methods:
+      - {name: compose, parameters: [{name: inference, type: Diagnosis}, {name: context, type: SanitizedDiagnosticContext}], returns: Diagnosis, effect: pure}
+    notes: [Asocia recomendaciones; evidencia y fuentes por ID lógico]
+  - id: Diagnosis
+    name: Diagnosis
+    package: domain.model.aggregates
+    layer: domain
+    stereotype: Aggregate
+    status: proposed
+    component_realized: diagnostic_output_component
+    persisted_as: diagnosis.diagnoses
+    attributes:
+      - {name: id, type: UUID, domain_attribute: id, nullable: false}
+      - {name: incidentId, type: UUID, domain_attribute: incident_id, nullable: false}
+      - {name: version, type: int, domain_attribute: version, nullable: false}
+      - {name: status, type: DiagnosisStatus, domain_attribute: status, nullable: false}
+      - {name: probableCause, type: ProbableCause, domain_attribute: probable_cause, nullable: true}
+      - {name: explanation, type: String, domain_attribute: explanation, nullable: true}
+      - {name: limitations, type: String, domain_attribute: limitations, nullable: true}
+      - {name: confidence, type: Object, domain_attribute: confidence, nullable: true}
+      - {name: diagnosisReadyAt, type: Instant, domain_attribute: diagnosis_ready_at, nullable: true}
+      - {name: correlationId, type: String, domain_attribute: correlation_id, nullable: false}
+      - {name: createdAt, type: Instant, domain_attribute: created_at, nullable: false}
+    methods:
+      - {name: assertReadySnapshot, parameters: [], returns: void, effect: pure}
+    notes: [append-only; actual = mayor versión por incidente]
+  - id: Recommendation
+    name: Recommendation
+    package: domain.model.entities
+    layer: domain
+    stereotype: Entity
+    status: proposed
+    component_realized: diagnostic_output_component
+    persisted_as: diagnosis.recommendations
+    attributes:
+      - {name: id, type: UUID, domain_attribute: id, nullable: false}
+      - {name: diagnosisId, type: UUID, domain_attribute: diagnosis_id, nullable: false}
+      - {name: description, type: String, domain_attribute: description, nullable: false}
+      - {name: critical, type: boolean, domain_attribute: critical, nullable: false}
+      - {name: correlationId, type: String, domain_attribute: correlation_id, nullable: false}
+      - {name: createdAt, type: Instant, domain_attribute: created_at, nullable: false}
+    methods: []
+  - id: ProbableCause
+    name: ProbableCause
+    package: domain.model.valueobjects
+    layer: domain
+    stereotype: ValueObject
+    status: proposed
+    component_realized: diagnostic_output_component
+    attributes:
+      - {name: value, type: String}
+    methods: []
+    notes: [Envuelve el texto probable_cause; sin taxonomía adicional]
+  - id: DiagnosisRepository
+    name: DiagnosisRepository
+    package: domain.services
+    layer: domain
+    stereotype: Repository
+    kind: interface
+    status: proposed
+    component_realized: diagnostic_output_component
+    attributes: []
+    methods:
+      - {name: appendSnapshot, parameters: [{name: diagnosis, type: Diagnosis}, {name: evidenceIds, type: 'List<UUID>'}, {name: sourceIds, type: 'List<UUID>'}], returns: UUID, effect: write}
+      - {name: findLatest, parameters: [{name: incidentId, type: UUID}], returns: 'Optional<Diagnosis>', effect: read}
+      - {name: supportingEvidenceIds, parameters: [{name: diagnosticId, type: UUID}], returns: 'List<UUID>', effect: read}
+      - {name: consultedSourceIds, parameters: [{name: diagnosticId, type: UUID}], returns: 'List<UUID>', effect: read}
+  - id: JpaDiagnosisRepositoryAdapter
+    name: JpaDiagnosisRepositoryAdapter
+    package: infrastructure.persistence.jpa
+    layer: infrastructure
+    stereotype: Adapter
+    status: proposed
+    component_realized: diagnostic_output_component
+    attributes: []
+    methods: []
+    persistence:
+      store: postgresql_operational_store
+      protocol: PostgreSQL
+      architecture_relationship: rel_output_postgresql
+      tables: [diagnosis.diagnoses, diagnosis.recommendations, diagnosis.diagnosis_evidence_links, diagnosis.diagnosis_source_links]
+  - id: RagRetrievalExternal
+    name: RAG Retrieval
+    package: external.rag_retrieval
+    layer: external
+    stereotype: External
+    status: proposed
+    component_realized: rag_retrieval
+    attributes: []
+    methods: []
+  - id: AzureOpenAiExternal
+    name: Azure OpenAI Service
+    package: external.azure_openai
+    layer: external
+    stereotype: External
+    status: proposed
+    component_realized: pretrained_llm_diagnostic_service
+    attributes: []
+    methods: []
+
+  - id: HumanReviewCommandController
+    name: HumanReviewCommandController
+    package: interfaces.rest
+    layer: interfaces
+    stereotype: Controller
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: recordHumanReview, parameters: [], returns: UUID, effect: write}
+    ingress:
+      architecture_relationship: rel_apim_diagnostic_api
+      protocol: REST/HTTPS
+  - id: HumanReviewQueryController
+    name: HumanReviewQueryController
+    package: interfaces.rest
+    layer: interfaces
+    stereotype: Controller
+    status: proposed
+    component_realized: diagnostic_api_component
+    attributes: []
+    methods:
+      - {name: getHumanReview, parameters: [], returns: 'Map<String, Object>', effect: read}
+    ingress:
+      architecture_relationship: rel_apim_diagnostic_api
+      protocol: REST/HTTPS
+  - id: RecordHumanReviewCommand
+    name: RecordHumanReviewCommand
+    package: domain.model.commands
+    layer: domain
+    stereotype: Command
+    status: proposed
+    component_realized: human_review_component
+    attributes:
+      - {name: diagnosticId, type: UUID}
+      - {name: reviewerRef, type: String}
+      - {name: decision, type: HumanReviewDecision}
+      - {name: timestamp, type: Instant}
+      - {name: correlationId, type: String}
+      - {name: actualCause, type: String}
+      - {name: comment, type: String}
+    methods: []
+  - id: HumanReviewCommandService
+    name: HumanReviewCommandService
+    package: application.internal.commandservices
+    layer: application
+    stereotype: CommandService
+    kind: interface
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: command, type: RecordHumanReviewCommand}], returns: UUID, effect: write}
+  - id: HumanReviewCommandServiceImpl
+    name: HumanReviewCommandServiceImpl
+    package: application.internal.commandservices
+    layer: application
+    stereotype: CommandService
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: handle, parameters: [{name: command, type: RecordHumanReviewCommand}], returns: UUID, effect: write}
+  - id: HumanReviewQueryService
+    name: HumanReviewQueryService
+    package: application.internal.queryservices
+    layer: application
+    stereotype: QueryService
+    kind: interface
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: findReviews, parameters: [{name: diagnosticId, type: UUID}], returns: 'Map<String, Object>', effect: read}
+  - id: HumanReviewQueryServiceImpl
+    name: HumanReviewQueryServiceImpl
+    package: application.internal.queryservices
+    layer: application
+    stereotype: QueryService
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: findReviews, parameters: [{name: diagnosticId, type: UUID}], returns: 'Map<String, Object>', effect: read}
+    notes: [Proyección de revisión; ausencia deriva PENDING]
+  - id: HumanReview
+    name: HumanReview
+    package: domain.model.aggregates
+    layer: domain
+    stereotype: Aggregate
+    status: proposed
+    component_realized: human_review_component
+    persisted_as: diagnosis.human_reviews
+    attributes:
+      - {name: id, type: UUID, domain_attribute: id, nullable: false}
+      - {name: diagnosticId, type: UUID, domain_attribute: diagnostic_id, nullable: false}
+      - {name: reviewerRef, type: String, domain_attribute: reviewer_ref, nullable: false}
+      - {name: decision, type: HumanReviewDecision, domain_attribute: decision, nullable: false}
+      - {name: timestamp, type: Instant, domain_attribute: timestamp, nullable: false}
+      - {name: correlationId, type: String, domain_attribute: correlation_id, nullable: false}
+      - {name: actualCause, type: String, domain_attribute: actual_cause, nullable: true}
+      - {name: comment, type: String, domain_attribute: comment, nullable: true}
+      - {name: createdAt, type: Instant, domain_attribute: created_at, nullable: false}
+    methods:
+      - {name: record, parameters: [{name: command, type: RecordHumanReviewCommand}], returns: HumanReview, effect: pure}
+      - {name: validateDecision, parameters: [], returns: void, effect: pure}
+    notes: [CORRECTED requiere actualCause no vacía; conserva la versión original]
+  - id: HumanReviewDecision
+    name: HumanReviewDecision
+    package: domain.model.valueobjects
+    layer: domain
+    stereotype: Enum
+    kind: enum
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods: []
+    values: [CONFIRMED, CORRECTED, REJECTED]
+  - id: RiskClassificationService
+    name: RiskClassificationService
+    package: domain.services
+    layer: domain
+    stereotype: DomainService
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: isCritical, parameters: [{name: recommendation, type: Recommendation}], returns: boolean, effect: pure}
+    notes: [Marcado crítico conforme a política aprobada; no deriva severidad del incidente]
+  - id: HumanReviewRepository
+    name: HumanReviewRepository
+    package: domain.services
+    layer: domain
+    stereotype: Repository
+    kind: interface
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - {name: appendReview, parameters: [{name: review, type: HumanReview}], returns: UUID, effect: write}
+      - {name: findByDiagnosticId, parameters: [{name: diagnosticId, type: UUID}], returns: 'List<HumanReview>', effect: read}
+  - id: JpaHumanReviewRepositoryAdapter
+    name: JpaHumanReviewRepositoryAdapter
+    package: infrastructure.persistence.jpa
+    layer: infrastructure
+    stereotype: Adapter
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods: []
+    persistence:
+      store: postgresql_operational_store
+      protocol: PostgreSQL
+      architecture_relationship: rel_human_review_postgresql
+      tables: [diagnosis.human_reviews]
+  - id: AuditTrailPort
+    name: AuditTrailPort
+    package: application.internal.outboundservices
+    layer: application
+    stereotype: Port
+    kind: interface
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods:
+      - name: appendHumanReviewMetadata
+        parameters:
+          - {name: reviewId, type: UUID}
+          - {name: diagnosticId, type: UUID}
+          - {name: reviewerRef, type: String}
+          - {name: decision, type: HumanReviewDecision}
+          - {name: timestamp, type: Instant}
+          - {name: correlationId, type: String}
+        returns: void
+        effect: write
+    notes: [Solo IDs y metadata saneada; sin contenido de evidencia ni comentario]
+  - id: PostgresAuditTrailAdapter
+    name: PostgresAuditTrailAdapter
+    package: infrastructure.persistence.jpa
+    layer: infrastructure
+    stereotype: Adapter
+    status: proposed
+    component_realized: human_review_component
+    attributes: []
+    methods: []
+    persistence:
+      store: postgresql_operational_store
+      protocol: PostgreSQL
+      architecture_relationship: rel_human_review_postgresql
+      tables: [audit.audit_events]
+    notes: [Excepción técnica transversal documentada; no es Bounded Context]
+
+relationships:
+  - {from: DiagnosisCommandController, to: GenerateDiagnosisCommandService, type: dispatches, label: command}
+  - {from: GenerateDiagnosisCommandServiceImpl, to: GenerateDiagnosisCommandService, type: implements}
+  - {from: GenerateDiagnosisCommandService, to: GenerateDiagnosisCommand, type: uses, label: recibe command}
+  - {from: GenerateDiagnosisCommandServiceImpl, to: DiagnosticOrchestrator, type: injects, label: delega diagnóstico}
+  - {from: DiagnosisQueryController, to: DiagnosisQueryService, type: dispatches, label: query}
+  - {from: DiagnosisQueryServiceImpl, to: DiagnosisQueryService, type: implements}
+  - {from: DiagnosisQueryService, to: GetDiagnosisQuery, type: uses, label: recibe query}
+  - {from: DiagnosisQueryServiceImpl, to: DiagnosisRepository, type: injects, label: solo lectura, methods: [findLatest, supportingEvidenceIds, consultedSourceIds]}
+  - {from: DiagnosisQueryServiceImpl, to: DiagnosticView, type: translates, label: compone proyección}
+  - {from: DiagnosticOrchestrator, to: KnowledgeRetrievalPort, type: injects, label: recupera conocimiento}
+  - {from: RagRetrievalHttpAdapter, to: KnowledgeRetrievalPort, type: implements}
+  - {from: RagRetrievalHttpAdapter, to: RagRetrievalExternal, type: calls_http, protocol: REST/HTTPS, architecture_relationship: rel_orchestrator_rag}
+  - {from: DiagnosticOrchestrator, to: DiagnosticLlmGateway, type: injects, label: solicita inferencia}
+  - {from: DiagnosticLlmGateway, to: SanitizedDiagnosticContext, type: uses, label: única entrada}
+  - {from: AzureOpenAiDiagnosticAdapter, to: DiagnosticLlmGateway, type: implements}
+  - {from: AzureOpenAiDiagnosticAdapter, to: AzureOpenAiExternal, type: calls_http, protocol: Azure OpenAI API/HTTPS, architecture_relationship: rel_orchestrator_llm}
+  - {from: AzureOpenAiDiagnosticAdapter, to: LlmResponseTranslator, type: injects, label: ACL de respuesta}
+  - {from: LlmResponseTranslator, to: Diagnosis, type: translates, label: tipos internos}
+  - {from: DiagnosticOrchestrator, to: DiagnosticOutputComposer, type: uses, label: compone diagnostic_output}
+  - {from: DiagnosticOrchestrator, to: Diagnosis, type: uses, label: snapshot propuesto}
+  - {from: DiagnosticOutputComposer, to: Diagnosis, type: uses, label: compone snapshot}
+  - {from: Diagnosis, to: Recommendation, type: uses, ownership: composition, multiplicity: '0..*', label: recomendaciones}
+  - {from: Diagnosis, to: ProbableCause, type: uses, ownership: composition, multiplicity: '0..1', label: hipótesis}
+  - {from: DiagnosticOrchestrator, to: DiagnosisRepository, type: injects, label: inserta snapshot, methods: [appendSnapshot]}
+  - {from: JpaDiagnosisRepositoryAdapter, to: DiagnosisRepository, type: implements}
+  - {from: JpaDiagnosisRepositoryAdapter, to: Diagnosis, type: persists, label: append-only}
+  - {from: JpaDiagnosisRepositoryAdapter, to: Recommendation, type: persists}
+  - {from: HumanReviewCommandController, to: HumanReviewCommandService, type: dispatches, label: command de revisión}
+  - {from: HumanReviewQueryController, to: HumanReviewQueryService, type: dispatches, label: query de revisión}
+  - {from: HumanReviewCommandServiceImpl, to: HumanReviewCommandService, type: implements}
+  - {from: HumanReviewCommandService, to: RecordHumanReviewCommand, type: uses, label: recibe command}
+  - {from: HumanReviewCommandServiceImpl, to: HumanReview, type: uses, label: registra y valida}
+  - {from: HumanReviewCommandServiceImpl, to: RiskClassificationService, type: uses, label: gobierno de recomendaciones}
+  - {from: DiagnosticOrchestrator, to: RiskClassificationService, type: uses, label: clasificación antes de persistir}
+  - {from: HumanReview, to: HumanReviewDecision, type: uses, label: decisión persistida}
+  - {from: HumanReviewCommandServiceImpl, to: HumanReviewRepository, type: injects, label: persiste revisión, methods: [appendReview]}
+  - {from: HumanReviewQueryServiceImpl, to: HumanReviewQueryService, type: implements}
+  - {from: HumanReviewQueryServiceImpl, to: HumanReviewRepository, type: injects, label: solo lectura, methods: [findByDiagnosticId]}
+  - {from: HumanReviewQueryServiceImpl, to: HumanReview, type: translates, label: lee para proyección}
+  - {from: JpaHumanReviewRepositoryAdapter, to: HumanReviewRepository, type: implements}
+  - {from: JpaHumanReviewRepositoryAdapter, to: HumanReview, type: persists}
+  - {from: HumanReviewCommandServiceImpl, to: AuditTrailPort, type: injects, label: audita metadata}
+  - {from: PostgresAuditTrailAdapter, to: AuditTrailPort, type: implements}
+
+assumptions:
+  - id: DA-001
+    description: Las firmas de controller abrevian el contrato REST; no fijan rutas nuevas ni DTO externos. Los servicios reciben los commands/queries explícitos y el controller solo adapta y delega.
+  - id: DA-002
+    description: Los repositorios tienen métodos de escritura y lectura sobre la misma persistencia. Las queries solo usan métodos read y componen proyecciones en aplicación; no se crean SQL views.
+  - id: DA-003
+    description: UUID e Instant representan uuid y timestamptz. Object representa el valor de confidence sin imponer escala ni usar un tipo JSON de proveedor en el dominio. ProbableCause envuelve text.
+  - id: DA-004
+    description: Las relaciones de composición representan membresía del aggregate; los atributos persisted_as son exclusivamente las columnas existentes. El adaptador persiste los vínculos por IDs, sin nuevas clases de tablas auxiliares.
+  - id: DA-005
+    description: SanitizedDiagnosticContext usa colecciones y mapas internos con semántica del input_contract vigente; el adaptador RAG traduce su respuesta a estas estructuras. El orquestador completa el contexto RAG antes de invocar infer.
+  - id: DA-006
+    description: Los proxies External son referencias gráficas con namespaces external.*, no clases Java implementables ni internals de los servicios remotos.
+open_questions:
+  - id: DQ-002
+    source: model/domain.yml#open_questions
+    description: Semántica y escala de confidence permanecen abiertas; se conserva el valor recibido.
+  - id: DCQ-001
+    source: model/architecture.yml#human_review_component
+    description: La política concreta de clasificación de riesgo no está especificada; se representa su contrato sin algoritmo, categorías ni umbrales.
+  - id: DCQ-002
+    source: model/architecture.yml#rel_correlation_diagnostic_api
+    description: La arquitectura declara recepción REST/HTTPS de contexto correlacionado, pero no su URI ni el DTO final. No se define un endpoint adicional.
+  - id: DCQ-003
+    source: model/architecture.yml#recommendation_service.diagnostic_output
+    description: La fuente concreta para rehidratar executionContext y failureSummary en la proyección de consulta no está especificada. Se conserva el contrato existente sin elegir almacenamiento adicional, joins entre contextos ni nuevas comunicaciones.
