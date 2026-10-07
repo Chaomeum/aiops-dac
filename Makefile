@@ -8,9 +8,9 @@ DESIGN_MODEL := model/design.yml
 DBML_TOOL_BIN := $(shell $(PYTHON) -c 'import sys; sys.path.insert(0, "tools/generators"); from domain_model import find_tool; print(find_tool("dbml2sql").parent)' 2>/dev/null)
 export PATH := $(DBML_TOOL_BIN):$(PATH)
 
-.PHONY: all check-env validate validate-domain validate_design validate-logical-expo classes physical logical logical-expo c4 db dbml sql er dictionary clean
+.PHONY: all check-env validate validate-domain validate_design validate-logical-expo validate-physical-expo classes physical physical-expo logical logical-expo c4 db dbml sql er dictionary clean
 
-all: check-env validate physical logical logical-expo c4 db classes
+all: check-env validate physical physical-expo logical logical-expo c4 db classes
 
 check-env:
 	@PYTHON="$(PYTHON)" bash tools/check_env.sh
@@ -46,6 +46,13 @@ dictionary: er
 physical: validate
 	@echo "==> Generating physical views"
 	@$(PYTHON) tools/run_legacy_views.py $(PHYSICAL_GENERATOR)
+
+validate-physical-expo: validate
+	@$(PYTHON) tools/generators/physical_presentation.py --validate-only
+
+physical-expo: validate-physical-expo
+	@echo "==> Generating physical presentation views (Graphviz)"
+	@$(PYTHON) tools/generators/physical_presentation.py
 
 logical: validate
 	@echo "==> Generating logical architecture (D2 + ELK)"

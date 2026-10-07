@@ -18,15 +18,15 @@ MODEL = ROOT / "model/logical_presentation.yml"
 SAFE_ID = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
-def load_models():
-    presentation = yaml.safe_load(MODEL.read_text(encoding="utf-8"))
+def load_models(model_path=MODEL):
+    presentation = yaml.safe_load(model_path.read_text(encoding="utf-8"))
     source = ROOT / presentation["architecture_source"]
     if source.resolve() != (ROOT / "model/architecture.yml").resolve():
         raise ValueError("architecture_source must reference model/architecture.yml")
     return presentation, yaml.safe_load(source.read_text(encoding="utf-8"))
 
 
-def prepare(presentation, architecture):
+def prepare(presentation, architecture, *, expected_kind="logical_presentation"):
     elements = {e["id"]: e for e in architecture["elements"]}
     relations = {r["id"]: r for r in architecture["relationships"]}
     collapse = presentation.get("collapse", {})
@@ -48,7 +48,7 @@ def prepare(presentation, architecture):
         if not SAFE_ID.fullmatch(vid) or vid in seen:
             raise ValueError(f"Invalid/duplicate view ID: {vid}")
         seen.add(vid)
-        if view["kind"] != "logical_presentation" or not view.get("title"):
+        if view["kind"] != expected_kind or not view.get("title"):
             raise ValueError(f"{vid}: missing title or invalid kind")
         members = view["elements"]
         if len(set(members)) != len(members) or not 1 <= len(members) <= limit:
@@ -95,8 +95,9 @@ def wrapped(value, width=26):
     return "\n".join(textwrap.wrap(value, width, break_long_words=False, break_on_hyphens=False))
 
 
-def generate_dot(presentation, elements, view, relations):
-    graph = Digraph(view["id"], comment="GENERATED — sources: model/logical_presentation.yml + model/architecture.yml")
+def generate_dot(presentation, elements, view, relations, *, node_attributes=None,
+                 model_source="model/logical_presentation.yml"):
+    graph = Digraph(view["id"], comment=f"GENERATED — sources: {model_source} + model/architecture.yml")
     heading = ('<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3">'
                f'<TR><TD><FONT POINT-SIZE="22">{escape(view["title"])}</FONT></TD></TR>'
                '<TR><TD><FONT POINT-SIZE="11">Diseño propuesto · Azul: prototipo · Gris: actores y sistemas externos · Verde: persistencia</FONT></TD></TR>'
@@ -128,7 +129,8 @@ def generate_dot(presentation, elements, view, relations):
                     tooltip += " | Componentes agrupados: " + ", ".join(
                         elements[child]["name"] for child, parent in presentation["collapse"].items() if parent == eid
                     )
-                cluster.node(eid, wrapped(e["name"]), tooltip=tooltip, **attrs)
+                attrs.update((node_attributes or {}).get(eid, {}))
+                cluster.node(eid, attrs.pop("label", wrapped(e["name"])), tooltip=tooltip, **attrs)
     for r in relations:
         label = wrapped(presentation["relationship_labels"][r["id"]], 24)
         if presentation.get("show_protocols", True):
