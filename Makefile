@@ -8,9 +8,9 @@ DESIGN_MODEL := model/design.yml
 DBML_TOOL_BIN := $(shell $(PYTHON) -c 'import sys; sys.path.insert(0, "tools/generators"); from domain_model import find_tool; print(find_tool("dbml2sql").parent)' 2>/dev/null)
 export PATH := $(DBML_TOOL_BIN):$(PATH)
 
-.PHONY: all check-env validate validate-domain validate_design validate-logical-expo validate-physical-expo classes physical physical-expo logical logical-expo c4 db dbml sql er dictionary clean
+.PHONY: all check-env validate validate-domain validate_design validate-logical-expo validate-physical-expo validate-c4-expo classes physical physical-expo logical logical-expo c4 c4-expo db dbml sql er dictionary clean
 
-all: check-env validate physical physical-expo logical logical-expo c4 db classes
+all: check-env validate physical physical-expo logical logical-expo c4 c4-expo db classes
 
 check-env:
 	@PYTHON="$(PYTHON)" bash tools/check_env.sh
@@ -68,6 +68,13 @@ logical-expo: validate-logical-expo
 c4: validate
 	@echo "==> Generating C4 architecture"
 	@$(PYTHON) tools/generators/c4.py
+
+validate-c4-expo: validate
+	@$(PYTHON) tools/generators/c4_container_presentation.py --validate-only
+
+c4-expo: validate-c4-expo
+	@echo "==> Generating slide-sized C4 container views"
+	@$(PYTHON) tools/generators/c4_container_presentation.py
 
 clean:
 	@echo "==> Cleaning generated artifacts"

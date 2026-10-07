@@ -1,0 +1,164 @@
+# Presentación 16:9 de las dos vistas C4 de contenedores existentes.
+# Membresía, fronteras y relaciones se contrastan con la proyección C4 canónica.
+model_version: "1.0.0"
+architecture_source: model/architecture.yml
+canvas: {width: 1920, height: 1080}
+projection: canonical_c4_container
+# Agrupaciones que ya realiza C4, explicitadas para esta presentación.
+collapse:
+  human_review_component: recommendation_service
+  pgvector_knowledge_store: postgresql_operational_store
+
+# Resúmenes editoriales; los nombres y tecnologías se leen del modelo canónico.
+node_summaries:
+  github_actions: Evidencia CI/CD y artifacts
+  observability_sources: Telemetría autorizada
+  pretrained_llm_diagnostic_service: Inferencia por API
+  ingestion_normalization_service: Normaliza y protege
+  azure_service_bus: Topic y suscripciones
+  pipeline_service: Pipelines y ejecuciones
+  log_event_service: Logs, eventos y evidencia
+  nlp_log_processor: Procesamiento semántico
+  evidence_correlation_engine: Contexto del incidente
+  recommendation_service: Causa probable y revisión
+  rag_retrieval: Conocimiento autorizado
+  postgresql_operational_store: Datos operacionales
+  object_evidence_store: Evidencias y artefactos
+  technical_users: Consulta y validación
+  entra_id: Identidad corporativa
+  web_dashboard: Consulta y revisión humana
+  api_management: APIs protegidas y enrutamiento
+
+relationship_labels:
+  rel_github_actions_ingestion_event: Eventos del workflow
+  rel_service_bus_pipeline_service: Contexto de ejecución
+  rel_service_bus_log_event_service: Evidencia normalizada
+  rel_pipeline_service_postgresql: Persiste contexto del pipeline
+  rel_log_event_service_postgresql: Referencias de evidencia
+  rel_log_event_service_object_store: Logs y evidencias extensas
+  rel_recommendation_service_postgresql: Diagnóstico y recomendaciones
+  rel_ingestion_github_actions_read: Consulta logs y artefactos
+  rel_ingestion_service_bus: Publica evidencia protegida
+  rel_service_bus_nlp: Eventos para NLP
+  rel_nlp_correlation: Evidencia procesada
+  rel_correlation_postgresql: Contexto y trazabilidad
+  rel_rag_pgvector: Recuperación semántica
+  rel_observability_sources_ingestion: Telemetría autorizada
+  rel_correlation_recommendation: Contexto correlacionado
+  rel_recommendation_rag: Solicita conocimiento RAG
+  rel_recommendation_llm: Inferencia con evidencia y RAG
+  rel_human_review_postgresql: Persiste revisión humana
+  rel_technical_users_dashboard: Consulta y revisión humana
+  rel_dashboard_entra: Autenticación corporativa
+  rel_dashboard_apim: Consume APIs protegidas
+  rel_apim_pipeline_service: Consulta pipelines y ejecuciones
+  rel_apim_log_event_service: Consulta logs y evidencias
+  rel_apim_recommendation_service: Diagnóstico y revisión
+  rel_github_actions_apim_diagnostic: Consulta resultado para artifact
+
+views:
+  - id: c4_expo_2a
+    kind: c4_container_presentation
+    source_view: c4_container_processing
+    include_external: true
+    elements:
+      - github_actions
+      - observability_sources
+      - ingestion_normalization_service
+      - azure_service_bus
+      - pipeline_service
+      - log_event_service
+      - nlp_log_processor
+      - evidence_correlation_engine
+      - recommendation_service
+      - rag_retrieval
+      - postgresql_operational_store
+      - pgvector_knowledge_store
+      - object_evidence_store
+      - pretrained_llm_diagnostic_service
+    # Centros en puntos Graphviz; eje Y ascendente. Solo disposición visual.
+    positions:
+      github_actions: [150, 795]
+      observability_sources: [150, 535]
+      pretrained_llm_diagnostic_service: [150, 245]
+      ingestion_normalization_service: [450, 795]
+      azure_service_bus: [720, 795]
+      pipeline_service: [990, 795]
+      log_event_service: [1260, 795]
+      nlp_log_processor: [720, 535]
+      evidence_correlation_engine: [990, 535]
+      recommendation_service: [1260, 535]
+      postgresql_operational_store: [450, 245]
+      rag_retrieval: [720, 245]
+      object_evidence_store: [990, 245]
+    routes:
+      rel_github_actions_ingestion_event: {from: e, to: w, via: [], label: [300, 810]}
+      rel_service_bus_pipeline_service: {from: e, to: w, via: [], label: [855, 810]}
+      rel_service_bus_log_event_service: {from: n, to: n, via: [[720, 900], [1260, 900]], label: [1050, 900]}
+      rel_pipeline_service_postgresql: {from: s, to: e, to_offset: 40, via: [[990, 680], [590, 680], [590, 285]], label: [850, 680]}
+      rel_log_event_service_postgresql: {from: s, to: e, to_offset: 24, via: [[1260, 650], [578, 650], [578, 269]], label: [1100, 650]}
+      rel_log_event_service_object_store: {from: e, to: e, via: [[1405, 795], [1405, 245]], label: [1420, 685]}
+      rel_recommendation_service_postgresql: {from: s, to: e, to_offset: -8, via: [[1260, 400], [595, 400], [595, 237]], label: [1110, 400]}
+      rel_ingestion_github_actions_read: {from: w, to: e, via: [[310, 760], [285, 760]], label: [300, 745]}
+      rel_ingestion_service_bus: {from: e, to: w, via: [], label: [585, 810]}
+      rel_service_bus_nlp: {from: s, to: n, via: [], label: [737, 665]}
+      rel_nlp_correlation: {from: e, to: w, via: [], label: [855, 550]}
+      rel_correlation_postgresql: {from: s, to: e, to_offset: 8, via: [[990, 425], [585, 425], [585, 253]], label: [780, 425]}
+      rel_rag_pgvector: {from: w, to: e, from_offset: -40, to_offset: -40, via: [], label: [585, 195]}
+      rel_observability_sources_ingestion: {from: e, to: s, via: [[300, 535], [300, 665], [450, 665]], label: [380, 665]}
+      rel_correlation_recommendation: {from: e, to: w, via: [], label: [1125, 550]}
+      rel_recommendation_rag: {from: w, to: n, from_offset: -40, via: [[1120, 495], [1120, 360], [720, 360]], label: [930, 360]}
+      rel_recommendation_llm: {from: s, to: e, via: [[1260, 340], [295, 340], [295, 245]], label: [450, 340]}
+      rel_human_review_postgresql: {from: s, to: e, to_offset: -24, via: [[1260, 380], [580, 380], [580, 221]], label: [1060, 380]}
+    narration: >
+      Las fuentes externas entregan evidencia a ingesta, que la protege antes del
+      topic de Service Bus. Tres suscripciones alimentan Pipeline, Log/Event y NLP.
+      NLP entrega evidencia a correlación y esta al servicio diagnóstico, que
+      orquesta RAG e inferencia con Azure OpenAI. PostgreSQL/pgvector y Blob
+      conservan datos y evidencias. La causa probable requiere revisión humana.
+
+  - id: c4_expo_2b
+    kind: c4_container_presentation
+    source_view: c4_container_consumption
+    include_external: true
+    elements:
+      - technical_users
+      - entra_id
+      - web_dashboard
+      - api_management
+      - pipeline_service
+      - log_event_service
+      - recommendation_service
+      - postgresql_operational_store
+      - object_evidence_store
+      - github_actions
+    positions:
+      technical_users: [150, 795]
+      github_actions: [150, 535]
+      entra_id: [150, 245]
+      web_dashboard: [450, 795]
+      api_management: [720, 535]
+      pipeline_service: [990, 795]
+      log_event_service: [990, 535]
+      recommendation_service: [990, 245]
+      postgresql_operational_store: [1260, 535]
+      object_evidence_store: [1260, 245]
+    routes:
+      rel_pipeline_service_postgresql: {from: e, to: n, via: [[1260, 795]], label: [1215, 810]}
+      rel_log_event_service_postgresql: {from: e, to: w, via: [], label: [1125, 550]}
+      rel_log_event_service_object_store: {from: s, to: n, via: [[990, 420], [1325, 420], [1325, 350], [1260, 350]], label: [1160, 420]}
+      rel_recommendation_service_postgresql: {from: e, to: w, via: [[1125, 245], [1125, 535]], label: [1125, 350]}
+      rel_technical_users_dashboard: {from: e, to: w, via: [], label: [300, 810]}
+      rel_dashboard_entra: {from: s, to: e, via: [[450, 665], [300, 665], [300, 245]], label: [300, 400]}
+      rel_dashboard_apim: {from: e, to: n, to_offset: -25, via: [[695, 795]], label: [710, 750]}
+      rel_apim_pipeline_service: {from: n, to: s, from_offset: 25, via: [[745, 660], [990, 660]], label: [860, 660]}
+      rel_apim_log_event_service: {from: e, to: w, via: [], label: [855, 550]}
+      rel_apim_recommendation_service: {from: s, to: w, via: [[720, 245]], label: [737, 350]}
+      rel_human_review_postgresql: {from: n, to: s, via: [[990, 390], [1215, 390], [1215, 435], [1260, 435]], label: [1140, 390]}
+      rel_github_actions_apim_diagnostic: {from: e, to: w, via: [], label: [445, 550]}
+    narration: >
+      El usuario accede al dashboard, se autentica con Entra ID y consume APIs
+      protegidas por APIM. Pipeline, Log/Event y diagnóstico conservan los datos
+      y la revisión humana en PostgreSQL; Log/Event administra evidencias en Blob.
+      GitHub Actions consulta el diagnóstico mediante APIM y publica su artifact.
+      La revisión pertenece al servicio diagnóstico, sin otro microservicio.
