@@ -1,0 +1,146 @@
+# Modelo de presentación; las decisiones y hechos se leen del SSOT referenciado.
+# No describe implementación ni sustituye las vistas canónicas.
+model_version: "1.0.0"
+architecture_source: model/architecture.yml
+purpose: Sustentación académica — síntesis de la arquitectura lógica
+show_protocols: false
+
+# Agrupación exclusivamente visual de componentes en su contenedor existente.
+# Las relaciones internas desaparecen al agrupar; las salientes conservan origen.
+collapse:
+  human_review_component: recommendation_service
+  diagnostic_api_component: recommendation_service
+  diagnostic_orchestrator_component: recommendation_service
+  diagnostic_output_component: recommendation_service
+
+# Etiquetas editoriales breves. Acción completa y protocolo: tooltip del SVG.
+relationship_labels:
+  rel_github_github_actions: Repositorio y workflows
+  rel_github_actions_ingestion_event: Eventos del workflow
+  rel_ingestion_github_actions_read: Consulta logs y artefactos
+  rel_observability_sources_ingestion: Telemetría autorizada
+  rel_ingestion_service_bus: Evidencia protegida
+  rel_service_bus_pipeline_service: Contexto de ejecución
+  rel_service_bus_log_event_service: Evidencia normalizada
+  rel_service_bus_nlp: Eventos normalizados
+  rel_nlp_correlation: Evidencia procesada
+  rel_correlation_recommendation: Contexto correlacionado
+  rel_recommendation_rag: Solicita conocimiento
+  rel_rag_pgvector: Búsqueda semántica
+  rel_recommendation_llm: Inferencia con evidencia y RAG
+  rel_technical_users_dashboard: Consulta y revisión humana
+  rel_dashboard_entra: Autenticación corporativa
+  rel_dashboard_apim: APIs protegidas
+  rel_apim_pipeline_service: Consulta ejecuciones
+  rel_apim_log_event_service: Consulta evidencias
+  rel_apim_recommendation_service: Diagnóstico y revisión
+  rel_pipeline_service_postgresql: Contexto del pipeline
+  rel_log_event_service_postgresql: Referencias de evidencia
+  rel_log_event_service_object_store: Logs y evidencias extensas
+  rel_recommendation_service_postgresql: Diagnóstico y recomendaciones
+  rel_human_review_postgresql: Decisiones de revisión
+  rel_github_actions_apim_diagnostic: Consulta diagnóstico para artifact
+  rel_correlation_postgresql: Contexto y trazabilidad
+
+views:
+  - id: logica_expo_01
+    kind: logical_presentation
+    title: "Lógica 01 — Entrada y distribución de evidencia"
+    status: draft
+    final: false
+    include_external: true
+    elements:
+      - github
+      - github_actions
+      - observability_sources
+      - ingestion_normalization_service
+      - azure_service_bus
+      - pipeline_service
+      - log_event_service
+    groups:
+      - id: sources
+        title: Fuentes externas
+        elements: [github, github_actions, observability_sources]
+      - id: intake
+        title: Ingesta y mensajería
+        elements: [ingestion_normalization_service, azure_service_bus]
+      - id: registration
+        title: Registro operacional
+        elements: [pipeline_service, log_event_service]
+    continuation: "Service Bus entrega también eventos a NLP (vista 02). Persistencia y consultas: vista 03."
+    narration: >
+      GitHub Actions origina eventos de ejecuciones fallidas. Ingesta consulta
+      evidencia autorizada, la normaliza y protege antes de publicarla en Service
+      Bus. Pipeline Service, Log/Event Service y NLP consumen suscripciones
+      independientes; NLP continúa en la segunda vista.
+
+  - id: logica_expo_02
+    kind: logical_presentation
+    title: "Lógica 02 — Diagnóstico asistido"
+    status: draft
+    final: false
+    include_external: true
+    elements:
+      - azure_service_bus
+      - nlp_log_processor
+      - evidence_correlation_engine
+      - recommendation_service
+      - rag_retrieval
+      - pgvector_knowledge_store
+      - pretrained_llm_diagnostic_service
+    groups:
+      - id: preparation
+        title: Preparación de evidencia
+        elements: [azure_service_bus, nlp_log_processor, evidence_correlation_engine]
+      - id: diagnosis
+        title: Orquestación del diagnóstico
+        elements: [recommendation_service]
+      - id: knowledge
+        title: Recuperación de conocimiento
+        elements: [rag_retrieval, pgvector_knowledge_store]
+      - id: inference
+        title: Inferencia externa
+        elements: [pretrained_llm_diagnostic_service]
+    continuation: "Entrada desde vista 01. Persistencia, consulta y revisión humana del diagnóstico: vista 03."
+    narration: >
+      NLP entrega evidencia procesada a correlación. Diagnostic & Recommendation
+      Service recibe el contexto del incidente, recupera conocimiento autorizado
+      mediante RAG y solicita inferencia a Azure OpenAI. La respuesta es una causa
+      probable con evidencia y recomendaciones; no ejecuta remediación autónoma.
+
+  - id: logica_expo_03
+    kind: logical_presentation
+    title: "Lógica 03 — Consumo y revisión humana"
+    status: draft
+    final: false
+    include_external: true
+    elements:
+      - technical_users
+      - web_dashboard
+      - entra_id
+      - github_actions
+      - api_management
+      - pipeline_service
+      - log_event_service
+      - recommendation_service
+      - postgresql_operational_store
+      - object_evidence_store
+    groups:
+      - id: interaction
+        title: Interacción e identidad
+        elements: [technical_users, web_dashboard, entra_id]
+      - id: perimeter
+        title: Acceso a las APIs
+        elements: [github_actions, api_management]
+      - id: services
+        title: Servicios del prototipo
+        elements: [pipeline_service, log_event_service, recommendation_service]
+      - id: persistence
+        title: Persistencia y evidencia
+        elements: [postgresql_operational_store, object_evidence_store]
+    continuation: "Los servicios de vistas 01/02 reaparecen como los mismos elementos. Actions publica su propio artifact."
+    narration: >
+      Los usuarios se autentican con Entra ID y consumen el dashboard mediante
+      APIs protegidas por APIM. Los servicios consultan y conservan contexto,
+      evidencia, diagnósticos y revisión humana. GitHub Actions recupera el
+      diagnóstico mediante APIM y publica el artifact con un paso nativo.
