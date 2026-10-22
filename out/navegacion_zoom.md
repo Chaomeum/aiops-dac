@@ -4,19 +4,19 @@ Modelo 1.0.0 — Diseño propuesto
 
 SSOT: `model/design.yml`. Las figuras C4 existentes conservan su modelo y membresía.
 
-## CD-1 — Diagnostic API y CQRS
+## CD-1 — Diagnostic API and CQRS
 
 [C4 Context (`c4_context`)](c4_context.svg) → [`c4_container_processing`](c4_container_processing.svg) → [`c4_component_diagnostic`](c4_component_diagnostic.svg) → `diagnostic_api_component` → [CD-1](CD-1.svg)
 
 Zoom-In: `diagnostic_api_component`; 15 clases/nodos, incluidos proxies.
 
-## CD-2 — Orquestación de Diagnóstico, RAG y LLM
+## CD-2 — Diagnostic Orchestration, RAG and LLM
 
 [C4 Context (`c4_context`)](c4_context.svg) → [`c4_container_processing`](c4_container_processing.svg) → [`c4_component_diagnostic`](c4_component_diagnostic.svg) → `diagnostic_orchestrator_component` → [CD-2](CD-2.svg)
 
 Zoom-In: `diagnostic_orchestrator_component`; 15 clases/nodos, incluidos proxies.
 
-## CD-3 — Human Review y Gobierno Diagnóstico
+## CD-3 — Human Review and Diagnostic Governance
 
 [C4 Context (`c4_context`)](c4_context.svg) → [`c4_container_processing`](c4_container_processing.svg) → [`c4_component_diagnostic`](c4_component_diagnostic.svg) → `human_review_component` → [CD-3](CD-3.svg)
 

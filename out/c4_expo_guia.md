@@ -6,7 +6,7 @@ PostgreSQL/pgvector conserva la agrupación de C4 2A; Human Review se proyecta e
 Los nombres y tecnologías completos permanecen en las cajas. Las flechas usan números y una leyenda lateral.
 SVG y PNG: 1920×1080, formato 16:9. Diseño propuesto, sin acreditar implementación.
 
-## C4 Level 2A — Ingesta y Procesamiento AIOps
+## C4 Level 2A — Ingestion and AIOps Processing
 
 [SVG](c4_expo_2a.svg) · [PNG](c4_expo_2a.png)
 
@@ -16,44 +16,44 @@ Las fuentes externas entregan evidencia a ingesta, que la protege antes del topi
 
 | Nombre exacto | Tipo / frontera | Tecnologías | Responsabilidades del modelo |
 |---|---|---|---|
-| Servicio de Ingesta y Normalización | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | authorized_capture, canonical_event_mapping, validation, parsing, cleaning, normalization, operational_noise_filtering, masking, anonymization, secret_filtering, data_minimization, correlation_id_assignment, evidence_metadata_capture |
+| Ingestion and Normalization Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | authorized_capture, canonical_event_mapping, validation, parsing, cleaning, normalization, operational_noise_filtering, masking, anonymization, secret_filtering, data_minimization, correlation_id_assignment, evidence_metadata_capture |
 | Azure Service Bus | container / dentro del prototipo | Azure Service Bus | persistent_asynchronous_messaging |
 | Pipeline Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | register_pipeline, register_execution, maintain_pipeline_stages, maintain_execution_state, maintain_execution_metadata |
 | Log/Event Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | register_normalized_evidence, query_logs_by_incident, query_events_by_incident, query_evidence_by_correlation_id, preserve_source_metadata, resolve_external_evidence_references |
-| Procesamiento NLP de Logs | container / dentro del prototipo | Azure Container Apps, Python / FastAPI, Drain3 | semantic_representation, log_preprocessing, signal_preparation |
-| Servicio de Correlación de Evidencias | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | Contexto del incidente |
+| NLP Log Processing | container / dentro del prototipo | Azure Container Apps, Python / FastAPI, Drain3 | semantic_representation, log_preprocessing, signal_preparation |
+| Evidence Correlation Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | Incident context |
 | Diagnostic & Recommendation Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | generate_initial_recommendations, associate_recommendation_with_probable_cause, associate_recommendation_with_evidence, expose_evidence_limitations, orchestrate_diagnostic_flow |
-| Recuperación de Conocimiento RAG | container / dentro del prototipo | Azure Container Apps, Python / FastAPI | retrieve_authorized_knowledge, semantic_search, preserve_provenance, interact_with_vector_store |
+| RAG Knowledge Retrieval | container / dentro del prototipo | Azure Container Apps, Python / FastAPI | retrieve_authorized_knowledge, semantic_search, preserve_provenance, interact_with_vector_store |
 | PostgreSQL | datastore / dentro del prototipo | PostgreSQL / pgvector | pipelines, incidents, diagnoses, human_reviews, recommendations, metrics, audit_metadata, evidence_references, traceability_metadata |
-| Almacenamiento de Evidencias y Artefactos | datastore / dentro del prototipo | Azure Blob Storage | large_logs, technical_evidence, pipeline_artifacts, diagnostic_reports, historical_logs_when_authorized |
+| Evidence and Artifact Storage | datastore / dentro del prototipo | Azure Blob Storage | large_logs, technical_evidence, pipeline_artifacts, diagnostic_reports, historical_logs_when_authorized |
 | GitHub Actions | external_system / externo al prototipo | GitHub Actions | ci_cd_execution_and_evidence_source |
-| Fuentes de Observabilidad y Runtime Compatibles | external_system / externo al prototipo | Azure Monitor, Application Insights | Telemetría autorizada |
-| Azure OpenAI Service | external_system / externo al prototipo | Familia GPT-4 | Inferencia por API |
+| Compatible Observability and Runtime Sources | external_system / externo al prototipo | Azure Monitor, Application Insights | Authorized telemetry |
+| Azure OpenAI Service | external_system / externo al prototipo | GPT-4 family | Inference via API |
 
 ### Relaciones
 
 | Nº | Origen → destino | Relación completa | Protocolo | Estilo |
 |---|---|---|---|---|
-| 01 | GitHub Actions → Servicio de Ingesta y Normalización | Emite eventos autorizados del workflow | HTTPS/Webhook | event |
-| 02 | Azure Service Bus → Pipeline Service | Entrega eventos de ejecución para registrar contexto del pipeline | Azure Service Bus | async |
-| 03 | Azure Service Bus → Log/Event Service | Entrega evidencia normalizada para registro y consulta | Azure Service Bus | async |
-| 04 | Pipeline Service → PostgreSQL | Persiste pipelines, etapas, estados y metadatos de ejecución | PostgreSQL | sync |
-| 05 | Log/Event Service → PostgreSQL | Persiste y consulta metadatos y referencias de evidencia normalizada | PostgreSQL | sync |
-| 06 | Log/Event Service → Almacenamiento de Evidencias y Artefactos | Almacena y resuelve referencias de logs extensos y evidencias | Object Storage API | sync |
-| 07 | Diagnostic & Recommendation Service → PostgreSQL | Persiste diagnóstico, recomendaciones y vínculos con evidencia | PostgreSQL | sync |
-| 08 | Servicio de Ingesta y Normalización → GitHub Actions | Recupera logs, artefactos y metadatos autorizados | GitHub API/HTTPS | sync |
-| 09 | Servicio de Ingesta y Normalización → Azure Service Bus | Publica evidencia normalizada y protegida | Azure Service Bus | async |
-| 10 | Azure Service Bus → Procesamiento NLP de Logs | Entrega eventos normalizados para procesamiento | Azure Service Bus | async |
-| 11 | Procesamiento NLP de Logs → Servicio de Correlación de Evidencias | Entrega logs y evidencia procesada para correlación | REST/HTTPS | sync |
-| 12 | Servicio de Correlación de Evidencias → PostgreSQL | Registra contexto correlacionado y trazabilidad | PostgreSQL | sync |
-| 13 | Recuperación de Conocimiento RAG → PostgreSQL | Recupera conocimiento operacional semánticamente relacionado | PostgreSQL/pgvector | sync |
-| 14 | Fuentes de Observabilidad y Runtime Compatibles → Servicio de Ingesta y Normalización | Proporciona telemetría y evidencia operacional autorizada | REST/HTTPS | sync |
-| 15 | Servicio de Correlación de Evidencias → Diagnostic & Recommendation Service | Entrega contexto correlacionado del incidente para diagnóstico asistido | REST/HTTPS | sync |
-| 16 | Diagnostic & Recommendation Service → Recuperación de Conocimiento RAG | Solicita conocimiento contextual autorizado para el incidente | REST/HTTPS | sync |
-| 17 | Diagnostic & Recommendation Service → Azure OpenAI Service | Solicita inferencia diagnóstica con evidencia saneada y contexto RAG | Azure OpenAI API/HTTPS | sync |
-| 18 | Diagnostic & Recommendation Service → PostgreSQL | Persiste decisiones y trazabilidad de revisión humana | PostgreSQL | sync |
+| 01 | GitHub Actions → Ingestion and Normalization Service | Emits authorized workflow events | HTTPS/Webhook | event |
+| 02 | Azure Service Bus → Pipeline Service | Delivers execution events to register pipeline context | Azure Service Bus | async |
+| 03 | Azure Service Bus → Log/Event Service | Delivers normalized evidence for registration and querying | Azure Service Bus | async |
+| 04 | Pipeline Service → PostgreSQL | Persists pipelines, stages, states and execution metadata | PostgreSQL | sync |
+| 05 | Log/Event Service → PostgreSQL | Persists and queries normalized evidence metadata and references | PostgreSQL | sync |
+| 06 | Log/Event Service → Evidence and Artifact Storage | Stores and resolves references to large logs and evidence | Object Storage API | sync |
+| 07 | Diagnostic & Recommendation Service → PostgreSQL | Persists diagnosis, recommendations and evidence links | PostgreSQL | sync |
+| 08 | Ingestion and Normalization Service → GitHub Actions | Retrieves authorized logs, artifacts and metadata | GitHub API/HTTPS | sync |
+| 09 | Ingestion and Normalization Service → Azure Service Bus | Publishes normalized and protected evidence | Azure Service Bus | async |
+| 10 | Azure Service Bus → NLP Log Processing | Delivers normalized events for processing | Azure Service Bus | async |
+| 11 | NLP Log Processing → Evidence Correlation Service | Delivers logs and processed evidence for correlation | REST/HTTPS | sync |
+| 12 | Evidence Correlation Service → PostgreSQL | Records correlated context and traceability | PostgreSQL | sync |
+| 13 | RAG Knowledge Retrieval → PostgreSQL | Retrieves semantically related operational knowledge | PostgreSQL/pgvector | sync |
+| 14 | Compatible Observability and Runtime Sources → Ingestion and Normalization Service | Provides authorized telemetry and operational evidence | REST/HTTPS | sync |
+| 15 | Evidence Correlation Service → Diagnostic & Recommendation Service | Delivers correlated incident context for assisted diagnosis | REST/HTTPS | sync |
+| 16 | Diagnostic & Recommendation Service → RAG Knowledge Retrieval | Requests authorized contextual knowledge for the incident | REST/HTTPS | sync |
+| 17 | Diagnostic & Recommendation Service → Azure OpenAI Service | Requests diagnostic inference with sanitized evidence and RAG context | Azure OpenAI API/HTTPS | sync |
+| 18 | Diagnostic & Recommendation Service → PostgreSQL | Persists human review decisions and traceability | PostgreSQL | sync |
 
-## C4 Level 2B — Consumo, Gobierno y Persistencia
+## C4 Level 2B — Consumption, Governance and Persistence
 
 [SVG](c4_expo_2b.svg) · [PNG](c4_expo_2b.png)
 
@@ -63,14 +63,14 @@ El usuario accede al dashboard, se autentica con Entra ID y consume APIs protegi
 
 | Nombre exacto | Tipo / frontera | Tecnologías | Responsabilidades del modelo |
 |---|---|---|---|
-| Dashboard Web AIOps | container / dentro del prototipo | Azure Static Web Apps, TypeScript / React, SPA | incident_query, diagnosis_query, evidence_query, recommendation_query, pipeline_status_query, tmd_metrics, comparative_diagnosis_metrics, human_review_registration, human_review_status_display, distinguish_generated_hypothesis_from_validated_diagnosis, role_protected_access |
+| AIOps Web Dashboard | container / dentro del prototipo | Azure Static Web Apps, TypeScript / React, SPA | incident_query, diagnosis_query, evidence_query, recommendation_query, pipeline_status_query, tmd_metrics, comparative_diagnosis_metrics, human_review_registration, human_review_status_display, distinguish_generated_hypothesis_from_validated_diagnosis, role_protected_access |
 | Azure API Management | container / dentro del prototipo | Azure API Management | protected_api_entry_point, request_routing, access_policy_enforcement |
 | Pipeline Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | register_pipeline, register_execution, maintain_pipeline_stages, maintain_execution_state, maintain_execution_metadata |
 | Log/Event Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | register_normalized_evidence, query_logs_by_incident, query_events_by_incident, query_evidence_by_correlation_id, preserve_source_metadata, resolve_external_evidence_references |
 | Diagnostic & Recommendation Service | container / dentro del prototipo | Azure Container Apps, Java / Spring Boot | generate_initial_recommendations, associate_recommendation_with_probable_cause, associate_recommendation_with_evidence, expose_evidence_limitations, orchestrate_diagnostic_flow |
 | PostgreSQL | datastore / dentro del prototipo | PostgreSQL | pipelines, incidents, diagnoses, human_reviews, recommendations, metrics, audit_metadata, evidence_references, traceability_metadata |
-| Almacenamiento de Evidencias y Artefactos | datastore / dentro del prototipo | Azure Blob Storage | large_logs, technical_evidence, pipeline_artifacts, diagnostic_reports, historical_logs_when_authorized |
-| Usuarios Técnicos | actor / externo al prototipo | No aplica | Consulta y validación |
+| Evidence and Artifact Storage | datastore / dentro del prototipo | Azure Blob Storage | large_logs, technical_evidence, pipeline_artifacts, diagnostic_reports, historical_logs_when_authorized |
+| Technical Users | actor / externo al prototipo | No aplica | Querying and validation |
 | Microsoft Entra ID | external_system / externo al prototipo | Microsoft Entra ID | corporate_authentication, identity_token_issuance |
 | GitHub Actions | external_system / externo al prototipo | GitHub Actions | ci_cd_execution_and_evidence_source |
 
@@ -78,15 +78,15 @@ El usuario accede al dashboard, se autentica con Entra ID y consume APIs protegi
 
 | Nº | Origen → destino | Relación completa | Protocolo | Estilo |
 |---|---|---|---|---|
-| 01 | Pipeline Service → PostgreSQL | Persiste pipelines, etapas, estados y metadatos de ejecución | PostgreSQL | sync |
-| 02 | Log/Event Service → PostgreSQL | Persiste y consulta metadatos y referencias de evidencia normalizada | PostgreSQL | sync |
-| 03 | Log/Event Service → Almacenamiento de Evidencias y Artefactos | Almacena y resuelve referencias de logs extensos y evidencias | Object Storage API | sync |
-| 04 | Diagnostic & Recommendation Service → PostgreSQL | Persiste diagnóstico, recomendaciones y vínculos con evidencia | PostgreSQL | sync |
-| 05 | Usuarios Técnicos → Dashboard Web AIOps | Consulta resultados y registra revisión humana | HTTPS | sync |
-| 06 | Dashboard Web AIOps → Microsoft Entra ID | Autentica usuarios corporativos | OIDC/OAuth2/HTTPS | sync |
-| 07 | Dashboard Web AIOps → Azure API Management | Consume APIs protegidas del prototipo | REST/HTTPS | sync |
-| 08 | Azure API Management → Pipeline Service | Enruta consultas de pipelines y ejecuciones | REST/HTTPS | sync |
-| 09 | Azure API Management → Log/Event Service | Enruta consultas de logs, eventos y evidencias | REST/HTTPS | sync |
-| 10 | Azure API Management → Diagnostic & Recommendation Service | Enruta consultas y operaciones de diagnóstico y revisión | REST/HTTPS | sync |
-| 11 | Diagnostic & Recommendation Service → PostgreSQL | Persiste decisiones y trazabilidad de revisión humana | PostgreSQL | sync |
-| 12 | GitHub Actions → Azure API Management | Consulta diagnostic_output para publicar el artifact del workflow | REST/HTTPS | sync |
+| 01 | Pipeline Service → PostgreSQL | Persists pipelines, stages, states and execution metadata | PostgreSQL | sync |
+| 02 | Log/Event Service → PostgreSQL | Persists and queries normalized evidence metadata and references | PostgreSQL | sync |
+| 03 | Log/Event Service → Evidence and Artifact Storage | Stores and resolves references to large logs and evidence | Object Storage API | sync |
+| 04 | Diagnostic & Recommendation Service → PostgreSQL | Persists diagnosis, recommendations and evidence links | PostgreSQL | sync |
+| 05 | Technical Users → AIOps Web Dashboard | Queries results and records human review | HTTPS | sync |
+| 06 | AIOps Web Dashboard → Microsoft Entra ID | Authenticates corporate users | OIDC/OAuth2/HTTPS | sync |
+| 07 | AIOps Web Dashboard → Azure API Management | Consumes protected prototype APIs | REST/HTTPS | sync |
+| 08 | Azure API Management → Pipeline Service | Routes pipeline and execution queries | REST/HTTPS | sync |
+| 09 | Azure API Management → Log/Event Service | Routes log, event and evidence queries | REST/HTTPS | sync |
+| 10 | Azure API Management → Diagnostic & Recommendation Service | Routes diagnosis and review queries and operations | REST/HTTPS | sync |
+| 11 | Diagnostic & Recommendation Service → PostgreSQL | Persists human review decisions and traceability | PostgreSQL | sync |
+| 12 | GitHub Actions → Azure API Management | Queries diagnostic_output to publish the workflow artifact | REST/HTTPS | sync |
