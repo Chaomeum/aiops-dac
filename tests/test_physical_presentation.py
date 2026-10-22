@@ -40,7 +40,7 @@ class PhysicalPresentationTests(unittest.TestCase):
         llm = self.elements["pretrained_llm_diagnostic_service"]
         self.assertEqual(llm["kind"], "external_system")
         self.assertIsNone(llm["model"])
-        self.assertEqual(renderer.technology_lines(llm), ["Familia GPT-4"])
+        self.assertEqual(renderer.technology_lines(llm), ["GPT-4 family"])
 
     def test_icons_are_installed_and_embedded_without_local_paths(self):
         fallbacks = set()

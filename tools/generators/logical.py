@@ -458,7 +458,7 @@ def generate_d2(model: dict[str, Any]) -> str:
 
     architecture_name = architecture.get(
         "name",
-        "Prototipo AIOps",
+        "AIOps Prototype",
     )
 
     lines: list[str] = []
@@ -483,7 +483,7 @@ def generate_d2(model: dict[str, Any]) -> str:
             (
                 "title: "
                 + d2_string(
-                    f"Arquitectura Lógica — {architecture_name}"
+                    f"Logical Architecture — {architecture_name}"
                 )
                 + " {"
             ),

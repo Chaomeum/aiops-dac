@@ -25,7 +25,7 @@ def generate_er(model):
     for r in model["relationships"]:
         if r["from"].rsplit(".", 1)[0] not in keys or r["to"].rsplit(".", 1)[0] not in keys:
             raise ValueError(f"{r['id']}: relationship points to nonexistent table")
-    title = f"Modelo persistente — una instancia PostgreSQL / {len(model['entities'])} tablas"
+    title = f"Persistent Model — One PostgreSQL Instance / {len(model['entities'])} Tables"
     lines = ["# GENERATED — DO NOT EDIT. SSOT: model/domain.yml", "direction: down",
              f"title: {quote(title)} {{",
              "  shape: text", "  style.font-size: 26", "  near: top-center", "}", ""]
@@ -47,9 +47,9 @@ def generate_er(model):
                 constraints = []
                 if c["pk"]: constraints.append("primary_key")
                 if c.get("fk"): constraints.append("foreign_key")
-                if c.get("logical_ref"): constraints.append("ID lógico")
+                if c.get("logical_ref"): constraints.append("logical ID")
                 if c["unique"]: constraints.append("unique")
-                elif c["name"] in unique_columns: constraints.append("UQ compuesto")
+                elif c["name"] in unique_columns: constraints.append("composite UQ")
                 typ = c.get("enum", c["type"])
                 row = f"    {c['name']}: {quote(typ)}"
                 if constraints:
@@ -57,16 +57,16 @@ def generate_er(model):
                 lines.append(row)
             hidden = len(e["attributes"]) - len(cols)
             if hidden:
-                lines.append(f"    {quote('+' + str(hidden) + ' columnas')}: \"ver diccionario\"")
+                lines.append(f"    {quote('+' + str(hidden) + ' columns')}: \"see dictionary\"")
             lines.append("  }")
         lines.extend(["}", ""])
     for r in model["relationships"]:
         logical = r["kind"] == "logical_ref"
-        label = "ref. lógica" if logical else "N:1"
+        label = "logical ref." if logical else "N:1"
         lines.append(f"{r['from']} -> {r['to']}: {quote(label)} {{")
         lines.extend(["  style.stroke-dash: 5" if logical else "  style.stroke-dash: 0",
                       '  style.stroke: "#586174"', "}"])
-    lines.extend(["", 'legend: "Leyenda\\nLínea sólida: FK intra-schema (N:1)\\nLínea discontinua: ref. lógica por ID, sin FK física\\nBorde punteado: pipeline_access_grants (IA-only / inferred)\\nUQ compuesto: miembro de clave única compuesta\\n+N columnas: ver diccionario de datos\\nNo hay navegación ORM cross-context" {',
+    lines.extend(["", 'legend: "Legend\\nSolid line: intra-schema FK (N:1)\\nDashed line: logical reference by ID, no physical FK\\nDotted border: pipeline_access_grants (IA-only / inferred)\\nComposite UQ: member of a composite unique key\\n+N columns: see data dictionary\\nNo cross-context ORM navigation" {',
                   "  shape: text", "  style.font-size: 16", "  near: bottom-center", "}"])
     return "\n".join(lines)
 

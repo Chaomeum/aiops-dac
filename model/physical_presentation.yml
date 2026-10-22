@@ -13,37 +13,37 @@ collapse:
   diagnostic_output_component: recommendation_service
 
 relationship_labels:
-  rel_github_github_actions: Repositorio y workflows
-  rel_github_actions_ingestion_event: Eventos del workflow
-  rel_ingestion_github_actions_read: Consulta logs y artefactos
-  rel_observability_sources_ingestion: Telemetría autorizada
-  rel_ingestion_service_bus: Evidencia protegida
-  rel_service_bus_pipeline_service: Contexto de ejecución
-  rel_service_bus_log_event_service: Evidencia normalizada
-  rel_service_bus_nlp: Eventos normalizados
-  rel_nlp_correlation: Evidencia procesada
-  rel_correlation_recommendation: Contexto correlacionado
-  rel_recommendation_rag: Solicita conocimiento
-  rel_rag_pgvector: Búsqueda semántica
-  rel_recommendation_llm: Inferencia con evidencia y RAG
-  rel_technical_users_dashboard: Consulta y revisión humana
-  rel_dashboard_entra: Autenticación corporativa
-  rel_dashboard_apim: APIs protegidas
-  rel_apim_pipeline_service: Consulta ejecuciones
-  rel_apim_log_event_service: Consulta evidencias
-  rel_apim_recommendation_service: Diagnóstico y revisión
-  rel_pipeline_service_postgresql: Contexto del pipeline
-  rel_log_event_service_postgresql: Referencias de evidencia
-  rel_log_event_service_object_store: Logs y evidencias extensas
-  rel_recommendation_service_postgresql: Diagnóstico y recomendaciones
-  rel_human_review_postgresql: Decisiones de revisión
-  rel_github_actions_apim_diagnostic: Consulta diagnóstico para artifact
-  rel_correlation_postgresql: Contexto y trazabilidad
+  rel_github_github_actions: "Repository and workflows"
+  rel_github_actions_ingestion_event: "Workflow events"
+  rel_ingestion_github_actions_read: "Queries logs and artifacts"
+  rel_observability_sources_ingestion: "Authorized telemetry"
+  rel_ingestion_service_bus: "Protected evidence"
+  rel_service_bus_pipeline_service: "Execution context"
+  rel_service_bus_log_event_service: "Normalized evidence"
+  rel_service_bus_nlp: "Normalized events"
+  rel_nlp_correlation: "Processed evidence"
+  rel_correlation_recommendation: "Correlated context"
+  rel_recommendation_rag: "Requests knowledge"
+  rel_rag_pgvector: "Semantic search"
+  rel_recommendation_llm: "Inference with evidence and RAG"
+  rel_technical_users_dashboard: "Querying and human review"
+  rel_dashboard_entra: "Corporate authentication"
+  rel_dashboard_apim: "Protected APIs"
+  rel_apim_pipeline_service: "Queries executions"
+  rel_apim_log_event_service: "Queries evidence"
+  rel_apim_recommendation_service: "Diagnosis and review"
+  rel_pipeline_service_postgresql: "Pipeline context"
+  rel_log_event_service_postgresql: "Evidence references"
+  rel_log_event_service_object_store: "Large logs and evidence"
+  rel_recommendation_service_postgresql: "Diagnosis and recommendations"
+  rel_human_review_postgresql: "Review decisions"
+  rel_github_actions_apim_diagnostic: "Queries diagnosis for artifact"
+  rel_correlation_postgresql: "Context and traceability"
 
 views:
   - id: fisica_expo_01
     kind: physical_presentation
-    title: "Física 01 — Fuentes, ingesta y mensajería"
+    title: "Physical View 01 — Sources, Ingestion and Messaging"
     status: draft
     final: false
     include_external: true
@@ -57,15 +57,15 @@ views:
       - log_event_service
     groups:
       - id: sources
-        title: Fuentes externas
+        title: "External sources"
         elements: [github, github_actions, observability_sources]
       - id: intake
-        title: Ingesta y mensajería
+        title: "Ingestion and messaging"
         elements: [ingestion_normalization_service, azure_service_bus]
       - id: registration
-        title: Consumidores operacionales
+        title: "Operational consumers"
         elements: [pipeline_service, log_event_service]
-    continuation: "Service Bus entrega también eventos a NLP (vista 02). Persistencia y acceso: vista 03."
+    continuation: "Service Bus also delivers events to NLP (view 02). Persistence and access: view 03."
     narration: >
       GitHub Actions y Azure Monitor aportan evidencia autorizada. Ingesta,
       cuyo diseño especifica Java y Spring Boot sobre Azure Container Apps,
@@ -75,7 +75,7 @@ views:
 
   - id: fisica_expo_02
     kind: physical_presentation
-    title: "Física 02 — Runtime del diagnóstico asistido"
+    title: "Physical View 02 — Assisted Diagnosis Runtime"
     status: draft
     final: false
     include_external: true
@@ -89,18 +89,18 @@ views:
       - pretrained_llm_diagnostic_service
     groups:
       - id: preparation
-        title: Mensajería y procesamiento
+        title: "Messaging and processing"
         elements: [azure_service_bus, nlp_log_processor, evidence_correlation_engine]
       - id: diagnosis
-        title: Orquestación del diagnóstico
+        title: "Diagnostic orchestration"
         elements: [recommendation_service]
       - id: knowledge
-        title: RAG y conocimiento vectorial
+        title: "RAG and vector knowledge"
         elements: [rag_retrieval, pgvector_knowledge_store]
       - id: inference
-        title: Servicio externo gestionado
+        title: "External managed service"
         elements: [pretrained_llm_diagnostic_service]
-    continuation: "Entrada desde vista 01. PostgreSQL/pgvector: misma instancia física. Consumo y revisión: vista 03."
+    continuation: "Input from view 01. PostgreSQL/pgvector: the same physical instance. Consumption and review: view 03."
     narration: >
       NLP y RAG usan Python y FastAPI; correlación y diagnóstico usan Java y Spring
       Boot. Los cuatro servicios tienen runtime propio en Azure Container Apps.
@@ -110,7 +110,7 @@ views:
 
   - id: fisica_expo_03
     kind: physical_presentation
-    title: "Física 03 — Acceso, persistencia y revisión humana"
+    title: "Physical View 03 — Access, Persistence and Human Review"
     status: draft
     final: false
     include_external: true
@@ -127,18 +127,18 @@ views:
       - object_evidence_store
     groups:
       - id: interaction
-        title: Presentación e identidad
+        title: "Presentation and identity"
         elements: [technical_users, web_dashboard, entra_id]
       - id: perimeter
-        title: Acceso a las APIs
+        title: "API access"
         elements: [github_actions, api_management]
       - id: services
-        title: Servicios de aplicación
+        title: "Application services"
         elements: [pipeline_service, log_event_service, recommendation_service]
       - id: persistence
-        title: Persistencia
+        title: "Persistence"
         elements: [postgresql_operational_store, object_evidence_store]
-    continuation: "Actions recupera el diagnóstico por APIM y publica su artifact. Revisión humana dentro del servicio diagnóstico."
+    continuation: "Actions retrieves the diagnosis through APIM and publishes its artifact. Human review is within the diagnostic service."
     narration: >
       El dashboard React y TypeScript se aloja en Azure Static Web Apps. Entra ID
       autentica y APIM protege y enruta las APIs; ninguno se despliega en Container

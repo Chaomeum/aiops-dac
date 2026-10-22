@@ -18,7 +18,7 @@ design_rules:
 # Las clases compartidas se definen una sola vez. elements es la membresía exacta.
 class_diagrams:
   - id: CD-1
-    title: CD-1 — Diagnostic API y CQRS
+    title: "CD-1 — Diagnostic API and CQRS"
     zoom_target: diagnostic_api_component
     elements:
       - DiagnosisCommandController
@@ -37,12 +37,12 @@ class_diagrams:
       - HumanReviewCommandService
       - HumanReviewQueryService
     notes:
-      - Commands devuelven identificadores; queries componen proyecciones sin escritura.
-      - Contexto correlacionado recibido por REST/HTTPS; URI no especificada por la arquitectura.
-      - Operaciones de revisión y consulta ya derivadas de IA/ADR; sin endpoints adicionales.
-      - Orquestador y repositorio se detallan en CD-2; revisión humana se detalla en CD-3.
+      - "Commands return identifiers; queries compose projections without writes."
+      - "Correlated context is received via REST/HTTPS; the architecture does not specify a URI."
+      - "Review and query operations already derive from IA/ADR; no additional endpoints."
+      - "The orchestrator and repository are detailed in CD-2; human review is detailed in CD-3."
   - id: CD-2
-    title: CD-2 — Orquestación de Diagnóstico, RAG y LLM
+    title: "CD-2 — Diagnostic Orchestration, RAG and LLM"
     zoom_target: diagnostic_orchestrator_component
     elements:
       - DiagnosticOrchestrator
@@ -61,12 +61,12 @@ class_diagrams:
       - RagRetrievalExternal
       - AzureOpenAiExternal
     notes:
-      - DiagnosticOutputComposer realiza diagnostic_output_component dentro de esta figura.
-      - Solo evidencia saneada, contexto autorizado y conocimiento RAG alcanzan el gateway.
-      - Cada snapshot diagnóstico es inmutable; DIAGNOSIS_READY exige causa probable y fecha.
-      - Recomendaciones y vínculos se insertan con el snapshot; IDs lógicos entre contextos.
+      - "DiagnosticOutputComposer realizes diagnostic_output_component within this figure."
+      - "Only sanitized evidence, authorized context and RAG knowledge reach the gateway."
+      - "Each diagnostic snapshot is immutable; DIAGNOSIS_READY requires a probable cause and a timestamp."
+      - "Recommendations and links are inserted with the snapshot; logical IDs connect contexts."
   - id: CD-3
-    title: CD-3 — Human Review y Gobierno Diagnóstico
+    title: "CD-3 — Human Review and Diagnostic Governance"
     zoom_target: human_review_component
     elements:
       - HumanReviewCommandController
@@ -84,10 +84,10 @@ class_diagrams:
       - AuditTrailPort
       - PostgresAuditTrailAdapter
     notes:
-      - CONFIRMED valida; CORRECTED exige actualCause; REJECTED rechaza sin alternativa validada.
-      - PENDING se deriva por ausencia de revisión; no se persiste en HumanReview.
-      - Clasificación de riesgo y marcado crítico requieren política aprobada; sin umbrales inventados.
-      - Auditoría transversal hacia audit.audit_events con metadata saneada e IDs de correlación.
+      - "CONFIRMED validates; CORRECTED requires actualCause; REJECTED rejects without a validated alternative."
+      - "PENDING is derived from the absence of a review; it is not persisted in HumanReview."
+      - "Risk classification and critical marking require an approved policy; no invented thresholds."
+      - "Cross-cutting auditing to audit.audit_events with sanitized metadata and correlation IDs."
 
 classes:
   - id: DiagnosisCommandController
@@ -202,7 +202,7 @@ classes:
       - {name: limitations, type: String}
       - {name: confidence, type: Object}
     methods: []
-    notes: [read model diagnostic_output; proyección en aplicación]
+    notes: ["diagnostic_output read model; application projection"]
 
   - id: DiagnosticOrchestrator
     name: DiagnosticOrchestrator
@@ -266,7 +266,7 @@ classes:
     attributes: []
     methods:
       - {name: toDiagnosis, parameters: [{name: azureResponse, type: String}], returns: Diagnosis, effect: pure}
-    notes: [ACL; respuesta Azure convertida a tipos internos]
+    notes: ["ACL; Azure response converted to internal types"]
   - id: SanitizedDiagnosticContext
     name: SanitizedDiagnosticContext
     package: domain.model.valueobjects
@@ -279,7 +279,7 @@ classes:
       - {name: correlatedContext, type: 'Map<String, Object>', contract_field: correlated_context}
       - {name: ragRetrievedKnowledge, type: 'List<Map<String, Object>>', contract_field: rag_retrieved_knowledge}
     methods: []
-    notes: [Evidencia saneada + contexto autorizado + RAG con provenance]
+    notes: ["Sanitized evidence + authorized context + RAG with provenance"]
   - id: DiagnosticOutputComposer
     name: DiagnosticOutputComposer
     package: domain.services
@@ -290,7 +290,7 @@ classes:
     attributes: []
     methods:
       - {name: compose, parameters: [{name: inference, type: Diagnosis}, {name: context, type: SanitizedDiagnosticContext}], returns: Diagnosis, effect: pure}
-    notes: [Asocia recomendaciones; evidencia y fuentes por ID lógico]
+    notes: ["Associates recommendations; evidence and sources by logical ID"]
   - id: Diagnosis
     name: Diagnosis
     package: domain.model.aggregates
@@ -313,7 +313,7 @@ classes:
       - {name: createdAt, type: Instant, domain_attribute: created_at, nullable: false}
     methods:
       - {name: assertReadySnapshot, parameters: [], returns: void, effect: pure}
-    notes: [append-only; actual = mayor versión por incidente]
+    notes: ["append-only; current = highest version per incident"]
   - id: Recommendation
     name: Recommendation
     package: domain.model.entities
@@ -340,7 +340,7 @@ classes:
     attributes:
       - {name: value, type: String}
     methods: []
-    notes: [Envuelve el texto probable_cause; sin taxonomía adicional]
+    notes: ["Wraps probable_cause text; no additional taxonomy"]
   - id: DiagnosisRepository
     name: DiagnosisRepository
     package: domain.services
@@ -472,7 +472,7 @@ classes:
     attributes: []
     methods:
       - {name: findReviews, parameters: [{name: diagnosticId, type: UUID}], returns: 'Map<String, Object>', effect: read}
-    notes: [Proyección de revisión; ausencia deriva PENDING]
+    notes: ["Review projection; absence implies PENDING"]
   - id: HumanReview
     name: HumanReview
     package: domain.model.aggregates
@@ -494,7 +494,7 @@ classes:
     methods:
       - {name: record, parameters: [{name: command, type: RecordHumanReviewCommand}], returns: HumanReview, effect: pure}
       - {name: validateDecision, parameters: [], returns: void, effect: pure}
-    notes: [CORRECTED requiere actualCause no vacía; conserva la versión original]
+    notes: ["CORRECTED requires a nonempty actualCause; preserves the original version"]
   - id: HumanReviewDecision
     name: HumanReviewDecision
     package: domain.model.valueobjects
@@ -516,7 +516,7 @@ classes:
     attributes: []
     methods:
       - {name: isCritical, parameters: [{name: recommendation, type: Recommendation}], returns: boolean, effect: pure}
-    notes: [Marcado crítico conforme a política aprobada; no deriva severidad del incidente]
+    notes: ["Critical marking follows the approved policy; does not derive incident severity"]
   - id: HumanReviewRepository
     name: HumanReviewRepository
     package: domain.services
@@ -563,7 +563,7 @@ classes:
           - {name: correlationId, type: String}
         returns: void
         effect: write
-    notes: [Solo IDs y metadata saneada; sin contenido de evidencia ni comentario]
+    notes: ["Only IDs and sanitized metadata; no evidence content or comment"]
   - id: PostgresAuditTrailAdapter
     name: PostgresAuditTrailAdapter
     package: infrastructure.persistence.jpa
@@ -578,51 +578,51 @@ classes:
       protocol: PostgreSQL
       architecture_relationship: rel_human_review_postgresql
       tables: [audit.audit_events]
-    notes: [Excepción técnica transversal documentada; no es Bounded Context]
+    notes: ["Documented cross-cutting technical exception; not a Bounded Context"]
 
 relationships:
   - {from: DiagnosisCommandController, to: GenerateDiagnosisCommandService, type: dispatches, label: command}
   - {from: GenerateDiagnosisCommandServiceImpl, to: GenerateDiagnosisCommandService, type: implements}
-  - {from: GenerateDiagnosisCommandService, to: GenerateDiagnosisCommand, type: uses, label: recibe command}
-  - {from: GenerateDiagnosisCommandServiceImpl, to: DiagnosticOrchestrator, type: injects, label: delega diagnóstico}
+  - {from: GenerateDiagnosisCommandService, to: GenerateDiagnosisCommand, type: uses, label: "receives command"}
+  - {from: GenerateDiagnosisCommandServiceImpl, to: DiagnosticOrchestrator, type: injects, label: "delegates diagnosis"}
   - {from: DiagnosisQueryController, to: DiagnosisQueryService, type: dispatches, label: query}
   - {from: DiagnosisQueryServiceImpl, to: DiagnosisQueryService, type: implements}
-  - {from: DiagnosisQueryService, to: GetDiagnosisQuery, type: uses, label: recibe query}
-  - {from: DiagnosisQueryServiceImpl, to: DiagnosisRepository, type: injects, label: solo lectura, methods: [findLatest, supportingEvidenceIds, consultedSourceIds]}
-  - {from: DiagnosisQueryServiceImpl, to: DiagnosticView, type: translates, label: compone proyección}
-  - {from: DiagnosticOrchestrator, to: KnowledgeRetrievalPort, type: injects, label: recupera conocimiento}
+  - {from: DiagnosisQueryService, to: GetDiagnosisQuery, type: uses, label: "receives query"}
+  - {from: DiagnosisQueryServiceImpl, to: DiagnosisRepository, type: injects, label: "read-only", methods: [findLatest, supportingEvidenceIds, consultedSourceIds]}
+  - {from: DiagnosisQueryServiceImpl, to: DiagnosticView, type: translates, label: "composes projection"}
+  - {from: DiagnosticOrchestrator, to: KnowledgeRetrievalPort, type: injects, label: "retrieves knowledge"}
   - {from: RagRetrievalHttpAdapter, to: KnowledgeRetrievalPort, type: implements}
   - {from: RagRetrievalHttpAdapter, to: RagRetrievalExternal, type: calls_http, protocol: REST/HTTPS, architecture_relationship: rel_orchestrator_rag}
-  - {from: DiagnosticOrchestrator, to: DiagnosticLlmGateway, type: injects, label: solicita inferencia}
-  - {from: DiagnosticLlmGateway, to: SanitizedDiagnosticContext, type: uses, label: única entrada}
+  - {from: DiagnosticOrchestrator, to: DiagnosticLlmGateway, type: injects, label: "requests inference"}
+  - {from: DiagnosticLlmGateway, to: SanitizedDiagnosticContext, type: uses, label: "sole input"}
   - {from: AzureOpenAiDiagnosticAdapter, to: DiagnosticLlmGateway, type: implements}
   - {from: AzureOpenAiDiagnosticAdapter, to: AzureOpenAiExternal, type: calls_http, protocol: Azure OpenAI API/HTTPS, architecture_relationship: rel_orchestrator_llm}
-  - {from: AzureOpenAiDiagnosticAdapter, to: LlmResponseTranslator, type: injects, label: ACL de respuesta}
-  - {from: LlmResponseTranslator, to: Diagnosis, type: translates, label: tipos internos}
-  - {from: DiagnosticOrchestrator, to: DiagnosticOutputComposer, type: uses, label: compone diagnostic_output}
-  - {from: DiagnosticOrchestrator, to: Diagnosis, type: uses, label: snapshot propuesto}
-  - {from: DiagnosticOutputComposer, to: Diagnosis, type: uses, label: compone snapshot}
-  - {from: Diagnosis, to: Recommendation, type: uses, ownership: composition, multiplicity: '0..*', label: recomendaciones}
-  - {from: Diagnosis, to: ProbableCause, type: uses, ownership: composition, multiplicity: '0..1', label: hipótesis}
-  - {from: DiagnosticOrchestrator, to: DiagnosisRepository, type: injects, label: inserta snapshot, methods: [appendSnapshot]}
+  - {from: AzureOpenAiDiagnosticAdapter, to: LlmResponseTranslator, type: injects, label: "response ACL"}
+  - {from: LlmResponseTranslator, to: Diagnosis, type: translates, label: "internal types"}
+  - {from: DiagnosticOrchestrator, to: DiagnosticOutputComposer, type: uses, label: "composes diagnostic_output"}
+  - {from: DiagnosticOrchestrator, to: Diagnosis, type: uses, label: "proposed snapshot"}
+  - {from: DiagnosticOutputComposer, to: Diagnosis, type: uses, label: "composes snapshot"}
+  - {from: Diagnosis, to: Recommendation, type: uses, ownership: composition, multiplicity: '0..*', label: "recommendations"}
+  - {from: Diagnosis, to: ProbableCause, type: uses, ownership: composition, multiplicity: '0..1', label: "hypothesis"}
+  - {from: DiagnosticOrchestrator, to: DiagnosisRepository, type: injects, label: "inserts snapshot", methods: [appendSnapshot]}
   - {from: JpaDiagnosisRepositoryAdapter, to: DiagnosisRepository, type: implements}
   - {from: JpaDiagnosisRepositoryAdapter, to: Diagnosis, type: persists, label: append-only}
   - {from: JpaDiagnosisRepositoryAdapter, to: Recommendation, type: persists}
-  - {from: HumanReviewCommandController, to: HumanReviewCommandService, type: dispatches, label: command de revisión}
-  - {from: HumanReviewQueryController, to: HumanReviewQueryService, type: dispatches, label: query de revisión}
+  - {from: HumanReviewCommandController, to: HumanReviewCommandService, type: dispatches, label: "review command"}
+  - {from: HumanReviewQueryController, to: HumanReviewQueryService, type: dispatches, label: "review query"}
   - {from: HumanReviewCommandServiceImpl, to: HumanReviewCommandService, type: implements}
-  - {from: HumanReviewCommandService, to: RecordHumanReviewCommand, type: uses, label: recibe command}
-  - {from: HumanReviewCommandServiceImpl, to: HumanReview, type: uses, label: registra y valida}
-  - {from: HumanReviewCommandServiceImpl, to: RiskClassificationService, type: uses, label: gobierno de recomendaciones}
-  - {from: DiagnosticOrchestrator, to: RiskClassificationService, type: uses, label: clasificación antes de persistir}
-  - {from: HumanReview, to: HumanReviewDecision, type: uses, label: decisión persistida}
-  - {from: HumanReviewCommandServiceImpl, to: HumanReviewRepository, type: injects, label: persiste revisión, methods: [appendReview]}
+  - {from: HumanReviewCommandService, to: RecordHumanReviewCommand, type: uses, label: "receives command"}
+  - {from: HumanReviewCommandServiceImpl, to: HumanReview, type: uses, label: "records and validates"}
+  - {from: HumanReviewCommandServiceImpl, to: RiskClassificationService, type: uses, label: "recommendation governance"}
+  - {from: DiagnosticOrchestrator, to: RiskClassificationService, type: uses, label: "classification before persistence"}
+  - {from: HumanReview, to: HumanReviewDecision, type: uses, label: "persisted decision"}
+  - {from: HumanReviewCommandServiceImpl, to: HumanReviewRepository, type: injects, label: "persists review", methods: [appendReview]}
   - {from: HumanReviewQueryServiceImpl, to: HumanReviewQueryService, type: implements}
-  - {from: HumanReviewQueryServiceImpl, to: HumanReviewRepository, type: injects, label: solo lectura, methods: [findByDiagnosticId]}
-  - {from: HumanReviewQueryServiceImpl, to: HumanReview, type: translates, label: lee para proyección}
+  - {from: HumanReviewQueryServiceImpl, to: HumanReviewRepository, type: injects, label: "read-only", methods: [findByDiagnosticId]}
+  - {from: HumanReviewQueryServiceImpl, to: HumanReview, type: translates, label: "reads for projection"}
   - {from: JpaHumanReviewRepositoryAdapter, to: HumanReviewRepository, type: implements}
   - {from: JpaHumanReviewRepositoryAdapter, to: HumanReview, type: persists}
-  - {from: HumanReviewCommandServiceImpl, to: AuditTrailPort, type: injects, label: audita metadata}
+  - {from: HumanReviewCommandServiceImpl, to: AuditTrailPort, type: injects, label: "audits metadata"}
   - {from: PostgresAuditTrailAdapter, to: AuditTrailPort, type: implements}
 
 assumptions:

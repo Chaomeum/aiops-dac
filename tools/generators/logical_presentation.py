@@ -100,8 +100,8 @@ def generate_dot(presentation, elements, view, relations, *, node_attributes=Non
     graph = Digraph(view["id"], comment=f"GENERATED — sources: {model_source} + model/architecture.yml")
     heading = ('<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="3">'
                f'<TR><TD><FONT POINT-SIZE="22">{escape(view["title"])}</FONT></TD></TR>'
-               '<TR><TD><FONT POINT-SIZE="11">Diseño propuesto · Azul: prototipo · Gris: actores y sistemas externos · Verde: persistencia</FONT></TD></TR>'
-               '<TR><TD><FONT POINT-SIZE="11">Continua: síncrona · Discontinua: asíncrona · Punteada: evento · Protocolos en tooltip y guía</FONT></TD></TR>'
+               '<TR><TD><FONT POINT-SIZE="11">Proposed design · Blue: prototype · Gray: actors and external systems · Green: persistence</FONT></TD></TR>'
+               '<TR><TD><FONT POINT-SIZE="11">Solid: synchronous · Dashed: asynchronous · Dotted: event · Protocols in tooltips and guide</FONT></TD></TR>'
                f'<TR><TD><FONT POINT-SIZE="12">{escape(wrapped(view["continuation"], 95)).replace(chr(10), "<BR/>")}</FONT></TD></TR>'
                '</TABLE>>')
     graph.attr(rankdir="LR", bgcolor="white", pad="0.25", nodesep="0.45", ranksep="0.65",
@@ -126,7 +126,7 @@ def generate_dot(presentation, elements, view, relations, *, node_attributes=Non
                     attrs.update(shape="cylinder", fillcolor="#ECFDF5", color="#059669")
                 tooltip = f'{eid} | {e["kind"]} | {e["layer"]} | status: {e["status"]}'
                 if eid == "recommendation_service":
-                    tooltip += " | Componentes agrupados: " + ", ".join(
+                    tooltip += " | Grouped components: " + ", ".join(
                         elements[child]["name"] for child, parent in presentation["collapse"].items() if parent == eid
                     )
                 attrs.update((node_attributes or {}).get(eid, {}))

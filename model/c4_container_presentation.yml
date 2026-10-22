@@ -11,50 +11,50 @@ collapse:
 
 # Resúmenes editoriales; los nombres y tecnologías se leen del modelo canónico.
 node_summaries:
-  github_actions: Evidencia CI/CD y artifacts
-  observability_sources: Telemetría autorizada
-  pretrained_llm_diagnostic_service: Inferencia por API
-  ingestion_normalization_service: Normaliza y protege
-  azure_service_bus: Topic y suscripciones
-  pipeline_service: Pipelines y ejecuciones
-  log_event_service: Logs, eventos y evidencia
-  nlp_log_processor: Procesamiento semántico
-  evidence_correlation_engine: Contexto del incidente
-  recommendation_service: Causa probable y revisión
-  rag_retrieval: Conocimiento autorizado
-  postgresql_operational_store: Datos operacionales
-  object_evidence_store: Evidencias y artefactos
-  technical_users: Consulta y validación
-  entra_id: Identidad corporativa
-  web_dashboard: Consulta y revisión humana
-  api_management: APIs protegidas y enrutamiento
+  github_actions: "CI/CD evidence and artifacts"
+  observability_sources: "Authorized telemetry"
+  pretrained_llm_diagnostic_service: "Inference via API"
+  ingestion_normalization_service: "Normalizes and protects"
+  azure_service_bus: "Topic and subscriptions"
+  pipeline_service: "Pipelines and executions"
+  log_event_service: "Logs, events and evidence"
+  nlp_log_processor: "Semantic processing"
+  evidence_correlation_engine: "Incident context"
+  recommendation_service: "Probable cause and review"
+  rag_retrieval: "Authorized knowledge"
+  postgresql_operational_store: "Operational data"
+  object_evidence_store: "Evidence and artifacts"
+  technical_users: "Querying and validation"
+  entra_id: "Corporate identity"
+  web_dashboard: "Querying and human review"
+  api_management: "Protected APIs and routing"
 
 relationship_labels:
-  rel_github_actions_ingestion_event: Eventos del workflow
-  rel_service_bus_pipeline_service: Contexto de ejecución
-  rel_service_bus_log_event_service: Evidencia normalizada
-  rel_pipeline_service_postgresql: Persiste contexto del pipeline
-  rel_log_event_service_postgresql: Referencias de evidencia
-  rel_log_event_service_object_store: Logs y evidencias extensas
-  rel_recommendation_service_postgresql: Diagnóstico y recomendaciones
-  rel_ingestion_github_actions_read: Consulta logs y artefactos
-  rel_ingestion_service_bus: Publica evidencia protegida
-  rel_service_bus_nlp: Eventos para NLP
-  rel_nlp_correlation: Evidencia procesada
-  rel_correlation_postgresql: Contexto y trazabilidad
-  rel_rag_pgvector: Recuperación semántica
-  rel_observability_sources_ingestion: Telemetría autorizada
-  rel_correlation_recommendation: Contexto correlacionado
-  rel_recommendation_rag: Solicita conocimiento RAG
-  rel_recommendation_llm: Inferencia con evidencia y RAG
-  rel_human_review_postgresql: Persiste revisión humana
-  rel_technical_users_dashboard: Consulta y revisión humana
-  rel_dashboard_entra: Autenticación corporativa
-  rel_dashboard_apim: Consume APIs protegidas
-  rel_apim_pipeline_service: Consulta pipelines y ejecuciones
-  rel_apim_log_event_service: Consulta logs y evidencias
-  rel_apim_recommendation_service: Diagnóstico y revisión
-  rel_github_actions_apim_diagnostic: Consulta resultado para artifact
+  rel_github_actions_ingestion_event: "Workflow events"
+  rel_service_bus_pipeline_service: "Execution context"
+  rel_service_bus_log_event_service: "Normalized evidence"
+  rel_pipeline_service_postgresql: "Persists pipeline context"
+  rel_log_event_service_postgresql: "Evidence references"
+  rel_log_event_service_object_store: "Large logs and evidence"
+  rel_recommendation_service_postgresql: "Diagnosis and recommendations"
+  rel_ingestion_github_actions_read: "Queries logs and artifacts"
+  rel_ingestion_service_bus: "Publishes protected evidence"
+  rel_service_bus_nlp: "Events for NLP"
+  rel_nlp_correlation: "Processed evidence"
+  rel_correlation_postgresql: "Context and traceability"
+  rel_rag_pgvector: "Semantic retrieval"
+  rel_observability_sources_ingestion: "Authorized telemetry"
+  rel_correlation_recommendation: "Correlated context"
+  rel_recommendation_rag: "Requests RAG knowledge"
+  rel_recommendation_llm: "Inference with evidence and RAG"
+  rel_human_review_postgresql: "Persists human review"
+  rel_technical_users_dashboard: "Querying and human review"
+  rel_dashboard_entra: "Corporate authentication"
+  rel_dashboard_apim: "Consumes protected APIs"
+  rel_apim_pipeline_service: "Queries pipelines and executions"
+  rel_apim_log_event_service: "Queries logs and evidence"
+  rel_apim_recommendation_service: "Diagnosis and review"
+  rel_github_actions_apim_diagnostic: "Queries result for artifact"
 
 views:
   - id: c4_expo_2a

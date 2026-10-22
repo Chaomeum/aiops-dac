@@ -176,8 +176,8 @@ def render(view, elements, layers, relationships, memberships, missing_icons):
             if outside is not None and outside not in stubs:
                 destinations = memberships[outside] - {view["id"]}
                 label = (
-                    f"continúa en\n{next(iter(destinations))}"
-                    if len(destinations) == 1 else "continúa fuera de esta vista"
+                    f"continues in\n{next(iter(destinations))}"
+                    if len(destinations) == 1 else "continues outside this view"
                 )
                 stubs[outside] = Node(
                     label, nodeid=f"stub_{outside}", labelloc="c", shape="note", style="dashed,filled",

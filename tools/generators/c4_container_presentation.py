@@ -107,13 +107,13 @@ def prepare(presentation, architecture):
 
 
 def node_label(element, presentation, projection):
-    kind = {"actor": "Persona", "external_system": "Sistema externo", "datastore": "Contenedor de datos", "container": "Contenedor"}[element["kind"]]
+    kind = {"actor": "Person", "external_system": "External system", "datastore": "Data container", "container": "Container"}[element["kind"]]
     technologies = technology_lines(element)
     if element["id"] == "postgresql_operational_store" and projection.combined_postgres:
         technologies = ["PostgreSQL / pgvector"]
     summary = presentation["node_summaries"][element["id"]]
     if element["id"] == "postgresql_operational_store" and projection.combined_postgres:
-        summary += " y conocimiento RAG"
+        summary += " and RAG knowledge"
     rows = [f'<TR><TD><FONT POINT-SIZE="11">[{kind}]</FONT></TD></TR>',
             f'<TR><TD><FONT POINT-SIZE="16"><B>{lines(element["name"], 22)}</B></FONT></TD></TR>']
     if technologies:
@@ -173,7 +173,7 @@ def generate_dot(presentation, architecture, view, projection):
                width=str(NODE_WIDTH / 72), height=str(NODE_HEIGHT / 72), margin="0.03", fontsize="16", penwidth="1.6")
     graph.attr("edge", fontname="DejaVu Sans", fontsize="14", color="#52647A", arrowsize="0.7", penwidth="1.4")
     graph.node("slide_title", projection.view["title"], pos="960,1040!", shape="plaintext", style="", width="24", height="0.5", fontsize="30")
-    graph.node("slide_subtitle", f"Diseño propuesto · {projection.count} nodos · {len(projection.relationships)} relaciones · Numeración en flechas y leyenda", pos="960,995!", shape="plaintext", style="", width="24", height="0.4", fontsize="16")
+    graph.node("slide_subtitle", f"Proposed design · {projection.count} nodes · {len(projection.relationships)} relationships · Numbers on arrows and in legend", pos="960,995!", shape="plaintext", style="", width="24", height="0.4", fontsize="16")
     # Presentation-only frame. neato -n2 does not lay out cluster boundaries.
     graph.node("prototype_boundary", "", pos="880,545!", width=str(1130 / 72), height=str(810 / 72),
                shape="box", style="dashed,rounded", color="#2563EB", penwidth="1.4")
@@ -195,7 +195,7 @@ def generate_dot(presentation, architecture, view, projection):
         add_node(graph, e)
     for e in projection.outside:
         add_node(graph, e, True)
-    rows = ['<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="18"><B>Relaciones y protocolos</B></FONT></TD></TR>']
+    rows = ['<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="18"><B>Relationships and protocols</B></FONT></TD></TR>']
     for index, r in enumerate(projection.relationships, 1):
         number = f"{index:02d}"
         graph.edge(r["from"], r["to"], xlabel=number, id=r["id"],
@@ -207,9 +207,9 @@ def generate_dot(presentation, architecture, view, projection):
                     f'<BR ALIGN="LEFT"/><FONT POINT-SIZE="12" COLOR="#52647A">{escape(r["protocol"])}</FONT></TD></TR>')
     legend = '<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="6" CELLPADDING="0">' + "".join(rows) + '</TABLE>>'
     graph.node("relation_legend", legend, pos="1700,560!", width="5.5", height="12.0", shape="plaintext", style="", fixedsize="false")
-    footer = "Azul: prototipo · Gris: actores/sistemas externos · Verde: persistencia | Continua: síncrona · Discontinua: asíncrona · Punteada: evento"
+    footer = "Blue: prototype · Gray: actors/external systems · Green: persistence | Solid: synchronous · Dashed: asynchronous · Dotted: event"
     graph.node("slide_footer", footer, pos="960,85!", shape="plaintext", style="", width="25", height="0.4", fontsize="14")
-    note = "PostgreSQL/pgvector: una instancia física. Azure OpenAI: API externa; familia GPT-4, modelo concreto sin fijar." if projection.combined_postgres else "Revisión humana dentro de Diagnostic & Recommendation Service. Actions publica el artifact mediante su propio workflow."
+    note = "PostgreSQL/pgvector: one physical instance. Azure OpenAI: external API; GPT-4 family, specific model unspecified." if projection.combined_postgres else "Human review within Diagnostic & Recommendation Service. Actions publishes the artifact through its own workflow."
     graph.node("slide_note", note, pos="960,45!", shape="plaintext", style="", width="25", height="0.4", fontsize="15")
     return graph.source
 

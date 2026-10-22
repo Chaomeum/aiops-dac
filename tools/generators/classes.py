@@ -49,7 +49,7 @@ def node_lines(item):
     if item.get("persisted_as"):
         annotations.append("persisted_as: " + item["persisted_as"])
     if item.get("persistence"):
-        annotations.extend(["PostgreSQL común:", *item["persistence"]["tables"]])
+        annotations.extend(["Shared PostgreSQL:", *item["persistence"]["tables"]])
     annotations.extend(item.get("notes", []))
     if annotations:
         lines.extend([f"note bottom of {cid}",
@@ -86,7 +86,7 @@ def generate_puml(design, diagram):
         literal(diagram["title"]),
         f'Zoom-In: {literal(diagram["zoom_target"])}',
         "end title",
-        f'footer Modelo {literal(design["model_version"])} - {diagram["id"]} - Diseño propuesto',
+        f'footer Model {literal(design["model_version"])} - {diagram["id"]} - Proposed design',
         "",
     ]
     for index, layer in enumerate(LAYERS):
@@ -122,7 +122,7 @@ def generate_puml(design, diagram):
         lines.append(f'{rel["from"]} {arrow}{multiplicity} {rel["to"]} : {literal(label)}')
     lines.extend(["", "legend bottom"])
     lines.append("  recommendation_service / Java / Spring Boot / status: proposed")
-    lines.append("  CQRS lógico / misma instancia PostgreSQL / dependencias por interfaces")
+    lines.append("  Logical CQRS / same PostgreSQL instance / dependencies through interfaces")
     for note in diagram.get("notes", []):
         lines.append("  " + literal(note))
     lines.extend(["endlegend", "@enduml", ""])

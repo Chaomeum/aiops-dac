@@ -1,6 +1,6 @@
 architecture:
   id: ey_aiops_ci_cd_diagnosis
-  name: Prototipo AIOps para diagnóstico de fallos CI/CD
+  name: "AIOps Prototype for CI/CD Failure Diagnosis"
   model_version: "0.4.0-c4-views"
   phase: "phase_4_c4_views"
   status: draft
@@ -116,20 +116,16 @@ sources:
 
 layers:
   - id: L1
-    name: Presentación y Consumo Operativo
-    purpose: >
-      Exponer incidentes, diagnósticos, evidencias, recomendaciones,
-      métricas y revisión humana.
+    name: "Presentation and Operational Consumption"
+    purpose: "Expose incidents, diagnoses, evidence, recommendations, metrics and human review."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
       - SRC_CHARTER#Alcance-del-Proyecto
 
   - id: L2
-    name: Acceso, Seguridad y Gobierno
-    purpose: >
-      Aplicar control de acceso, mínimo privilegio, auditoría,
-      trazabilidad y controles de privacidad.
+    name: "Access, Security and Governance"
+    purpose: "Apply access control, least privilege, auditing, traceability and privacy controls."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -137,10 +133,8 @@ layers:
       - SRC_DRIFT#Modelo-de-acceso-a-GitHub
 
   - id: L3
-    name: Ingesta y Normalización
-    purpose: >
-      Capturar evidencia autorizada, validar, limpiar, normalizar,
-      minimizar y proteger información antes del análisis.
+    name: "Ingestion and Normalization"
+    purpose: "Capture authorized evidence; validate, clean, normalize, minimize and protect information before analysis."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -148,10 +142,8 @@ layers:
       - SRC_DRIFT#Captura-e-ingesta
 
   - id: L4
-    name: Procesamiento Orientado a Eventos
-    purpose: >
-      Desacoplar la ingesta del procesamiento mediante mensajería
-      persistente y asíncrona.
+    name: "Event-Driven Processing"
+    purpose: "Decouple ingestion from processing through persistent asynchronous messaging."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -159,10 +151,8 @@ layers:
       - SRC_DRIFT#Patron-de-mensajeria
 
   - id: L5
-    name: Procesamiento y Correlación AIOps
-    purpose: >
-      Procesar semánticamente registros y correlacionar evidencia
-      operacional de fallos identificados por GitHub Actions.
+    name: "AIOps Processing and Correlation"
+    purpose: "Process logs semantically and correlate operational evidence of failures identified by GitHub Actions."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -171,10 +161,8 @@ layers:
       - SRC_DRIFT#Correlacion-de-evidencia
 
   - id: L6
-    name: Inteligencia Asistida y Diagnóstico
-    purpose: >
-      Recuperar conocimiento contextual y generar hipótesis
-      diagnósticas asistidas mediante un LLM preentrenado.
+    name: "Assisted Intelligence and Diagnosis"
+    purpose: "Retrieve contextual knowledge and generate assisted diagnostic hypotheses using a pretrained LLM."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -182,10 +170,8 @@ layers:
       - SRC_DRIFT#Modelo-de-lenguaje
 
   - id: L7
-    name: Persistencia y Evidencia
-    purpose: >
-      Conservar incidentes, diagnósticos, revisiones, auditoría,
-      conocimiento recuperable y evidencias.
+    name: "Persistence and Evidence"
+    purpose: "Retain incidents, diagnoses, reviews, audit records, retrievable knowledge and evidence."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Logica
@@ -193,10 +179,8 @@ layers:
       - SRC_DRIFT#Persistencia-estructurada
 
   - id: L8
-    name: Integraciones Externas
-    purpose: >
-      Representar las herramientas CI/CD, DevSecOps y observabilidad
-      que producen o consumen evidencia operacional.
+    name: "External Integrations"
+    purpose: "Represent CI/CD, DevSecOps and observability tools that produce or consume operational evidence."
     status: confirmed
     source:
       - SRC_TI#Arquitectura-Integrada
@@ -205,7 +189,7 @@ layers:
 
 elements:
   - id: technical_users
-    name: Usuarios Técnicos
+    name: "Technical Users"
     kind: actor
     layer: L1
     roles:
@@ -260,7 +244,7 @@ elements:
       - SRC_ADR_014
 
   - id: observability_sources
-    name: Fuentes de Observabilidad y Runtime Compatibles
+    name: "Compatible Observability and Runtime Sources"
     kind: external_system
     layer: L8
     evidence_types:
@@ -317,7 +301,7 @@ elements:
     - SRC_ADR_016
 
   - id: ingestion_normalization_service
-    name: Servicio de Ingesta y Normalización
+    name: "Ingestion and Normalization Service"
     backend:
       language: Java
       framework: Spring Boot
@@ -384,7 +368,7 @@ elements:
       - SRC_DRIFT#Patron-de-mensajeria
 
   - id: nlp_log_processor
-    name: Procesamiento NLP de Logs
+    name: "NLP Log Processing"
     backend:
       language: Python
       framework: FastAPI
@@ -470,7 +454,7 @@ elements:
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B28:C28"
 
   - id: evidence_correlation_engine
-    name: Servicio de Correlación de Evidencias
+    name: "Evidence Correlation Service"
     backend:
       language: Java
       framework: Spring Boot
@@ -606,7 +590,7 @@ elements:
       - SRC_ADR_017
 
   - id: rag_retrieval
-    name: Recuperación de Conocimiento RAG
+    name: "RAG Knowledge Retrieval"
     backend:
       language: Python
       framework: FastAPI
@@ -710,7 +694,7 @@ elements:
       - SRC_DRIFT#Recuperacion-vectorial
 
   - id: object_evidence_store
-    name: Almacenamiento de Evidencias y Artefactos
+    name: "Evidence and Artifact Storage"
     kind: datastore
     layer: L7
     responsibilities:
@@ -733,7 +717,7 @@ elements:
       - "TP202620027 - Plan de trabajo v.1.0.xlsx#Plan de Trabajo!B30:C30"
 
   - id: web_dashboard
-    name: Dashboard Web AIOps
+    name: "AIOps Web Dashboard"
     frontend:
       language: TypeScript
       framework: React
@@ -778,7 +762,7 @@ relationships:
   - id: rel_github_actions_ingestion_event
     from: github_actions
     to: ingestion_normalization_service
-    label: Emite eventos autorizados del workflow
+    label: "Emits authorized workflow events"
     protocol: HTTPS/Webhook
     style: event
     access: read_only
@@ -792,7 +776,7 @@ relationships:
   - id: rel_service_bus_pipeline_service
     from: azure_service_bus
     to: pipeline_service
-    label: Entrega eventos de ejecución para registrar contexto del pipeline
+    label: "Delivers execution events to register pipeline context"
     protocol: Azure Service Bus
     style: async
     status: confirmed
@@ -803,7 +787,7 @@ relationships:
   - id: rel_service_bus_log_event_service
     from: azure_service_bus
     to: log_event_service
-    label: Entrega evidencia normalizada para registro y consulta
+    label: "Delivers normalized evidence for registration and querying"
     protocol: Azure Service Bus
     style: async
     status: confirmed
@@ -818,7 +802,7 @@ relationships:
   - id: rel_pipeline_service_postgresql
     from: pipeline_service
     to: postgresql_operational_store
-    label: Persiste pipelines, etapas, estados y metadatos de ejecución
+    label: "Persists pipelines, stages, states and execution metadata"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -829,7 +813,7 @@ relationships:
   - id: rel_log_event_service_postgresql
     from: log_event_service
     to: postgresql_operational_store
-    label: Persiste y consulta metadatos y referencias de evidencia normalizada
+    label: "Persists and queries normalized evidence metadata and references"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -840,7 +824,7 @@ relationships:
   - id: rel_log_event_service_object_store
     from: log_event_service
     to: object_evidence_store
-    label: Almacena y resuelve referencias de logs extensos y evidencias
+    label: "Stores and resolves references to large logs and evidence"
     protocol: Object Storage API
     style: sync
     status: confirmed
@@ -856,7 +840,7 @@ relationships:
   - id: rel_recommendation_service_postgresql
     from: recommendation_service
     to: postgresql_operational_store
-    label: Persiste diagnóstico, recomendaciones y vínculos con evidencia
+    label: "Persists diagnosis, recommendations and evidence links"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -867,7 +851,7 @@ relationships:
   - id: rel_ingestion_github_actions_read
     from: ingestion_normalization_service
     to: github_actions
-    label: Recupera logs, artefactos y metadatos autorizados
+    label: "Retrieves authorized logs, artifacts and metadata"
     protocol: GitHub API/HTTPS
     style: sync
     access: read_only
@@ -879,7 +863,7 @@ relationships:
   - id: rel_ingestion_service_bus
     from: ingestion_normalization_service
     to: azure_service_bus
-    label: Publica evidencia normalizada y protegida
+    label: "Publishes normalized and protected evidence"
     protocol: Azure Service Bus
     style: async
     status: confirmed
@@ -890,7 +874,7 @@ relationships:
   - id: rel_service_bus_nlp
     from: azure_service_bus
     to: nlp_log_processor
-    label: Entrega eventos normalizados para procesamiento
+    label: "Delivers normalized events for processing"
     protocol: Azure Service Bus
     style: async
     status: confirmed
@@ -900,7 +884,7 @@ relationships:
   - id: rel_nlp_correlation
     from: nlp_log_processor
     to: evidence_correlation_engine
-    label: Entrega logs y evidencia procesada para correlación
+    label: "Delivers logs and processed evidence for correlation"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -910,7 +894,7 @@ relationships:
   - id: rel_correlation_postgresql
     from: evidence_correlation_engine
     to: postgresql_operational_store
-    label: Registra contexto correlacionado y trazabilidad
+    label: "Records correlated context and traceability"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -921,7 +905,7 @@ relationships:
   - id: rel_rag_pgvector
     from: rag_retrieval
     to: pgvector_knowledge_store
-    label: Recupera conocimiento operacional semánticamente relacionado
+    label: "Retrieves semantically related operational knowledge"
     protocol: PostgreSQL/pgvector
     style: sync
     status: confirmed
@@ -932,7 +916,7 @@ relationships:
   - id: rel_github_github_actions
     from: github
     to: github_actions
-    label: Proporciona repositorio, commits y definición de workflows CI/CD
+    label: "Provides the repository, commits and CI/CD workflow definitions"
     protocol: GitHub API/HTTPS
     style: event
     status: confirmed
@@ -943,7 +927,7 @@ relationships:
   - id: rel_observability_sources_ingestion
     from: observability_sources
     to: ingestion_normalization_service
-    label: Proporciona telemetría y evidencia operacional autorizada
+    label: "Provides authorized telemetry and operational evidence"
     protocol: REST/HTTPS
     style: sync
     access: read_only
@@ -956,7 +940,7 @@ relationships:
   - id: rel_technical_users_dashboard
     from: technical_users
     to: web_dashboard
-    label: Consulta resultados y registra revisión humana
+    label: "Queries results and records human review"
     protocol: HTTPS
     style: sync
     status: confirmed
@@ -967,7 +951,7 @@ relationships:
   - id: rel_correlation_recommendation
     from: evidence_correlation_engine
     to: recommendation_service
-    label: Entrega contexto correlacionado del incidente para diagnóstico asistido
+    label: "Delivers correlated incident context for assisted diagnosis"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -977,7 +961,7 @@ relationships:
   - id: rel_recommendation_rag
     from: recommendation_service
     to: rag_retrieval
-    label: Solicita conocimiento contextual autorizado para el incidente
+    label: "Requests authorized contextual knowledge for the incident"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -987,7 +971,7 @@ relationships:
   - id: rel_recommendation_llm
     from: recommendation_service
     to: pretrained_llm_diagnostic_service
-    label: Solicita inferencia diagnóstica con evidencia saneada y contexto RAG
+    label: "Requests diagnostic inference with sanitized evidence and RAG context"
     protocol: Azure OpenAI API/HTTPS
     style: sync
     status: confirmed
@@ -998,7 +982,7 @@ relationships:
   - id: rel_dashboard_entra
     from: web_dashboard
     to: entra_id
-    label: Autentica usuarios corporativos
+    label: "Authenticates corporate users"
     protocol: OIDC/OAuth2/HTTPS
     style: sync
     status: confirmed
@@ -1009,7 +993,7 @@ relationships:
   - id: rel_dashboard_apim
     from: web_dashboard
     to: api_management
-    label: Consume APIs protegidas del prototipo
+    label: "Consumes protected prototype APIs"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1021,7 +1005,7 @@ relationships:
   - id: rel_apim_pipeline_service
     from: api_management
     to: pipeline_service
-    label: Enruta consultas de pipelines y ejecuciones
+    label: "Routes pipeline and execution queries"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1033,7 +1017,7 @@ relationships:
   - id: rel_apim_log_event_service
     from: api_management
     to: log_event_service
-    label: Enruta consultas de logs, eventos y evidencias
+    label: "Routes log, event and evidence queries"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1045,7 +1029,7 @@ relationships:
   - id: rel_apim_recommendation_service
     from: api_management
     to: recommendation_service
-    label: Enruta consultas y operaciones de diagnóstico y revisión
+    label: "Routes diagnosis and review queries and operations"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1057,7 +1041,7 @@ relationships:
   - id: rel_recommendation_human_review
     from: recommendation_service
     to: human_review_component
-    label: Gestiona clasificación de riesgo y revisión humana
+    label: "Manages risk classification and human review"
     protocol: in-process
     style: sync
     status: confirmed
@@ -1068,7 +1052,7 @@ relationships:
   - id: rel_human_review_postgresql
     from: human_review_component
     to: postgresql_operational_store
-    label: Persiste decisiones y trazabilidad de revisión humana
+    label: "Persists human review decisions and traceability"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -1079,7 +1063,7 @@ relationships:
   - id: rel_github_actions_apim_diagnostic
     from: github_actions
     to: api_management
-    label: Consulta diagnostic_output para publicar el artifact del workflow
+    label: "Queries diagnostic_output to publish the workflow artifact"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1091,7 +1075,7 @@ relationships:
   - id: rel_apim_diagnostic_api
     from: api_management
     to: diagnostic_api_component
-    label: Enruta consultas y operaciones de diagnóstico y revisión
+    label: "Routes diagnosis and review queries and operations"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1103,7 +1087,7 @@ relationships:
   - id: rel_correlation_diagnostic_api
     from: evidence_correlation_engine
     to: diagnostic_api_component
-    label: Entrega contexto correlacionado para diagnóstico
+    label: "Delivers correlated context for diagnosis"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1115,7 +1099,7 @@ relationships:
   - id: rel_diagnostic_api_orchestrator
     from: diagnostic_api_component
     to: diagnostic_orchestrator_component
-    label: Delega la generación del diagnóstico
+    label: "Delegates diagnosis generation"
     protocol: in-process
     style: sync
     status: confirmed
@@ -1125,7 +1109,7 @@ relationships:
   - id: rel_orchestrator_rag
     from: diagnostic_orchestrator_component
     to: rag_retrieval
-    label: Solicita conocimiento contextual autorizado
+    label: "Requests authorized contextual knowledge"
     protocol: REST/HTTPS
     style: sync
     status: confirmed
@@ -1137,7 +1121,7 @@ relationships:
   - id: rel_orchestrator_llm
     from: diagnostic_orchestrator_component
     to: pretrained_llm_diagnostic_service
-    label: Solicita inferencia diagnóstica con contexto RAG
+    label: "Requests diagnostic inference with RAG context"
     protocol: Azure OpenAI API/HTTPS
     style: sync
     status: confirmed
@@ -1150,7 +1134,7 @@ relationships:
   - id: rel_orchestrator_output
     from: diagnostic_orchestrator_component
     to: diagnostic_output_component
-    label: Entrega resultado de inferencia y evidencia contextual
+    label: "Delivers inference results and contextual evidence"
     protocol: in-process
     style: sync
     status: confirmed
@@ -1160,7 +1144,7 @@ relationships:
   - id: rel_output_postgresql
     from: diagnostic_output_component
     to: postgresql_operational_store
-    label: Persiste diagnóstico, recomendaciones y vínculos con evidencia
+    label: "Persists diagnosis, recommendations and evidence links"
     protocol: PostgreSQL
     style: sync
     status: confirmed
@@ -1171,7 +1155,7 @@ relationships:
   - id: rel_diagnostic_api_human_review
     from: diagnostic_api_component
     to: human_review_component
-    label: Delega registro y validación humana del diagnóstico
+    label: "Delegates diagnosis recording and human validation"
     protocol: in-process
     style: sync
     status: confirmed
@@ -1558,14 +1542,14 @@ views:
 
   - id: c4_context
     kind: c4_context
-    title: "C4 Level 1 — Contexto del Sistema"
+    title: "C4 Level 1 — System Context"
     zoom_target: ey_aiops_ci_cd_diagnosis
     status: draft
     final: false
 
   - id: c4_container_processing
     kind: c4_container
-    title: "C4 Level 2A — Ingesta y Procesamiento AIOps"
+    title: "C4 Level 2A — Ingestion and AIOps Processing"
     zoom_from: c4_context
     zoom_target: ey_aiops_ci_cd_diagnosis
     status: draft
@@ -1589,7 +1573,7 @@ views:
 
   - id: c4_container_consumption
     kind: c4_container
-    title: "C4 Level 2B — Consumo, Gobierno y Persistencia"
+    title: "C4 Level 2B — Consumption, Governance and Persistence"
     zoom_from: c4_context
     zoom_target: ey_aiops_ci_cd_diagnosis
     status: draft
@@ -1609,7 +1593,7 @@ views:
 
   - id: c4_component_diagnostic
     kind: c4_component
-    title: "C4 Level 3 — Componentes del Diagnóstico"
+    title: "C4 Level 3 — Diagnostic Components"
     zoom_from: c4_container_processing
     zoom_target: recommendation_service
     container: recommendation_service
@@ -1634,7 +1618,7 @@ views:
   # ----------------------------------------------------------
   - id: physical_01_ingestion
     kind: physical
-    title: "Vista Física 01 — Fuentes, Ingesta y Mensajería"
+    title: "Physical View 01 — Sources, Ingestion and Messaging"
     purpose: >
       Mostrar las fuentes externas autorizadas que originan evidencia
       operacional, su ingreso controlado al prototipo y el desacoplamiento
@@ -1669,7 +1653,7 @@ views:
   # ----------------------------------------------------------
   - id: physical_02_aiops_core
     kind: physical
-    title: "Vista Física 02 — Procesamiento AIOps y Diagnóstico Asistido"
+    title: "Physical View 02 — AIOps Processing and Assisted Diagnosis"
     purpose: >
       Mostrar el núcleo de procesamiento del prototipo desde la gestión
       del contexto operacional de fallos identificados por GitHub Actions
@@ -1710,7 +1694,7 @@ views:
   # ----------------------------------------------------------
   - id: physical_03_governance_consumption
     kind: physical
-    title: "Vista Física 03 — Persistencia, Gobierno y Consumo Operativo"
+    title: "Physical View 03 — Persistence, Governance and Operational Consumption"
     purpose: >
       Mostrar la persistencia operacional y de evidencias, los controles
       de gobierno y auditoría, la publicación del diagnóstico y los

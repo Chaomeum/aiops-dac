@@ -43,7 +43,7 @@ def technology_lines(element):
     if parser.get("decision_status") == "closed" and parser.get("selected"):
         lines.append(parser["selected"])
     if element.get("model_family"):
-        lines.append("Familia " + element["model_family"])
+        lines.append(element["model_family"] + " family")
     return [line for line in lines if line]
 
 
